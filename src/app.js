@@ -15,7 +15,7 @@ const modeController = new ModeController(stateManager);
 const audioEngine = new AudioEngine(stateManager);
 const mappingEngine = new MappingEngine(stateManager);
 const inputEngine = new InputEngine(stateManager);
-const ui = new UI(stateManager);
+const ui = new UI(stateManager, mappingEngine);
 
 // Register Modes
 modeController.registerMode('free_play', new FreePlayMode(stateManager));
@@ -36,7 +36,7 @@ mappingEngine.setNoteHandler((noteEvent) => {
     if (processedEvent) {
         console.log('Playing Note:', processedEvent);
         audioEngine.handleNote(processedEvent);
-        
+
         // Update UI
         // Use new handler that respects layout and event data
         ui.handleNoteEvent(processedEvent);

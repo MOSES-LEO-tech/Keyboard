@@ -22,10 +22,10 @@ export class LayoutManager {
             console.warn(`Layout ${name} not found.`);
             return;
         }
-        
+
         this.currentLayout = this.layouts.get(name);
         console.log(`Switched to layout: ${name}`);
-        
+
         // Notify StateManager so UI can update? 
         // Or assumes StateManager triggered this.
         // If triggered manually, we should update state.
@@ -40,8 +40,8 @@ export class LayoutManager {
     }
 
     // Proxy method to get note from key
-    getNoteFromKey(keyCode, currentOctave) {
+    getNoteFromKey(keyCode, currentOctave, modifiers = {}) {
         if (!this.currentLayout) return null;
-        return this.currentLayout.map(keyCode, currentOctave);
+        return this.currentLayout.map(keyCode, currentOctave, modifiers);
     }
 }

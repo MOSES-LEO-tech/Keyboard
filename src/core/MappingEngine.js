@@ -6,12 +6,12 @@ export class MappingEngine {
     constructor(stateManager) {
         this.stateManager = stateManager;
         this.onNote = null; // Callback for audio engine
-        
+
         // Initialize Layout System
         this.layoutManager = new LayoutManager(stateManager);
         this.layoutManager.registerLayout('piano', new PianoLayout());
         this.layoutManager.registerLayout('keyboard', new KeyboardLayout());
-        
+
         // Default to piano
         this.layoutManager.switchTo('piano');
 
@@ -35,14 +35,27 @@ export class MappingEngine {
             return;
         }
 
-        if (type === 'keydown' && code === 'KeyZ') {
+        // Octave Switching (Left/Right)
+        if (type === 'keydown' && code === 'ArrowLeft') {
             const current = this.stateManager.getState().octave || 4;
             if (current > 1) this.stateManager.setState({ octave: current - 1 });
             return;
         }
-        if (type === 'keydown' && code === 'KeyX') {
+        if (type === 'keydown' && code === 'ArrowRight') {
             const current = this.stateManager.getState().octave || 4;
             if (current < 7) this.stateManager.setState({ octave: current + 1 });
+            return;
+        }
+
+        // Volume Control (Up/Down)
+        if (type === 'keydown' && code === 'ArrowUp') {
+            const current = this.stateManager.getState().volume ?? 2.5; // Default 2.5 if undefined
+            if (current < 5) this.stateManager.setState({ volume: Math.min(5, current + 0.5) });
+            return;
+        }
+        if (type === 'keydown' && code === 'ArrowDown') {
+            const current = this.stateManager.getState().volume ?? 2.5;
+            if (current > 0) this.stateManager.setState({ volume: Math.max(0, current - 0.5) });
             return;
         }
 
@@ -53,7 +66,12 @@ export class MappingEngine {
 
         // Delegate mapping to Active Layout
         const currentOctave = this.stateManager.getState().octave || 4;
-        const noteInfo = this.layoutManager.getNoteFromKey(code, currentOctave);
+        const modifiers = {
+            shiftKey: event.originalEvent?.shiftKey || false,
+            ctrlKey: event.originalEvent?.ctrlKey || false,
+            altKey: event.originalEvent?.altKey || false
+        };
+        const noteInfo = this.layoutManager.getNoteFromKey(code, currentOctave, modifiers);
 
         if (!noteInfo) return; // Not a mapped key in current layout
 
@@ -70,7 +88,7 @@ export class MappingEngine {
             this.onNote(noteEvent);
         }
     }
-    
+
     // Helper to expose layout manager to App/UI if needed
     getLayoutManager() {
         return this.layoutManager;
