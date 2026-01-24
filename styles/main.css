@@ -1,41 +1,97 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+
+:root {
+    --font-sans: 'Outfit', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+
+    /* Backgrounds */
+    --bg-deep: #050508;
+    --bg-gradient: radial-gradient(circle at 50% 0%, #1a1a2e 0%, #050508 100%);
+
+    /* Surface / Glass */
+    --glass-bg: rgba(20, 20, 25, 0.4);
+    --glass-border: rgba(255, 255, 255, 0.05);
+    --glass-blur: 15px;
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+
+    /* Text */
+    --text-main: #e0e0e0;
+    --text-muted: #808090;
+    --text-highlight: #ffffff;
+
+    /* Accents & Neon */
+    --accent-primary: #00f3ff;
+    /* Cyan Neon */
+    --accent-secondary: #bc13fe;
+    /* Purple Neon */
+    --neon-glow: 0 0 10px rgba(0, 243, 255, 0.5), 0 0 20px rgba(0, 243, 255, 0.3);
+
+    /* Keys */
+    --key-white-bg: #e0e0e0;
+    --key-white-shadow: inset 0 -5px 10px rgba(0, 0, 0, 0.1), 0 2px 5px rgba(0, 0, 0, 0.3);
+    --key-black-bg: #1a1a1a;
+    --key-black-shadow: inset 0 -2px 5px rgba(255, 255, 255, 0.1), 0 5px 15px rgba(0, 0, 0, 0.5);
+
+    /* Spacing */
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-full: 9999px;
+}
+
+body {
+    background: var(--bg-deep);
+    background-image: var(--bg-gradient);
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    margin: 0;
+    height: 100vh;
+    overflow: hidden;
+    /* Prevent scroll */
+    display: flex;
+    flex-direction: column;
+}
+
 #status-bar {
     width: 100%;
-    padding: 10px;
-    background: #1e1e1e;
-    border-bottom: 1px solid #333;
+    padding: var(--space-2-5);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
     display: flex;
     justify-content: center;
 }
 
 .controls {
     display: flex;
-    gap: 20px;
+    gap: var(--space-5);
     align-items: center;
 }
 
 .control-group {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--space-2-5);
 }
 
 select,
 button {
-    background: #333;
-    color: white;
-    border: 1px solid #555;
-    padding: 5px 10px;
-    border-radius: 4px;
+    background: var(--control-bg);
+    color: var(--control-text);
+    border: 1px solid var(--control-border);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-1);
     cursor: pointer;
 }
 
 select:focus,
 button:focus {
-    outline: 2px solid #666;
+    outline: 2px solid var(--focus);
 }
 
 label {
-    color: #888;
+    color: var(--muted);
     font-size: 14px;
 }
 
@@ -44,7 +100,7 @@ label {
     display: flex;
     justify-content: center;
     position: relative;
-    padding-top: 20px;
+    padding-top: var(--space-5);
 }
 
 .key {
@@ -57,40 +113,40 @@ label {
     box-sizing: border-box;
     cursor: pointer;
     user-select: none;
-    transition: background 0.1s;
+    transition: background var(--transition-medium);
 }
 
 .key.white {
     width: 24px;
     height: 200px;
-    background: #ffffff;
+    background: var(--white-key-bg);
     z-index: 1;
 }
 
 .key.white.active {
-    background: #e0e0e0;
+    background: var(--white-key-active);
     box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
 }
 
 .key.black {
     width: 16px;
     height: 120px;
-    background: #222;
+    background: var(--black-key-bg);
     margin-left: -8px;
     margin-right: -8px;
     z-index: 2;
-    color: #ccc;
-    border-radius: 0 0 2px 2px;
+    color: var(--black-key-text);
+    border-radius: 0 0 var(--black-key-radius) var(--black-key-radius);
 }
 
 .key.black.active {
-    background: #444;
+    background: var(--black-key-active);
 }
 
 .note-label {
     margin-bottom: 5px;
     font-size: 10px;
-    color: #333;
+    color: var(--note-label);
     pointer-events: none;
     font-weight: bold;
 }
@@ -99,12 +155,12 @@ label {
     position: absolute;
     bottom: 25px;
     /* Above the note label */
-    background: rgba(0, 0, 0, 0.8);
-    color: #fff;
+    background: var(--pc-overlay-dark-bg);
+    color: var(--pc-overlay-dark-text);
     padding: 2px 4px;
-    border-radius: 4px;
+    border-radius: var(--radius-1);
     font-size: 10px;
-    font-family: monospace;
+    font-family: var(--font-mono);
     pointer-events: none;
     z-index: 10;
 }
@@ -112,8 +168,8 @@ label {
 .key.black .pc-key {
     bottom: 15px;
     /* Adjust for black key height */
-    background: rgba(255, 255, 255, 0.9);
-    color: #000;
+    background: var(--pc-overlay-light-bg);
+    color: var(--pc-overlay-light-text);
 }
 
 /* --- Computer Keyboard Layout Styles --- */
@@ -121,67 +177,163 @@ label {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
-    padding: 40px;
+    gap: var(--space-1-25);
+    padding: var(--space-10);
 }
 
 .keyboard-row {
     display: flex;
-    gap: 5px;
+    gap: var(--space-1-25);
+}
+
+/* --- Piano Layout Styles --- */
+.keyboard.piano-layout {
+    display: flex;
+    justify-content: center;
+    position: relative;
+    padding-top: 100px;
+    /* Space for control deck */
+    perspective: 1000px;
+    width: 100%;
+    /* Ensure it fills width */
+    padding-left: 2vw;
+    padding-right: 2vw;
+    box-sizing: border-box;
+}
+
+.key {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    border: 1px solid rgba(0, 0, 0, 0.5);
+    box-sizing: border-box;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.1s, background 0.1s, box-shadow 0.1s;
+    border-radius: 0 0 4px 4px;
+}
+
+.key.white {
+    /* ~35 white keys total? Let's assume we want to fit them all or scroll.
+       If we want to fill, we use flex-grow or calc.
+       Let's stick to vw but make it aggressive.
+    */
+    flex: 1;
+    /* Grow to fill */
+    min-width: 25px;
+    max-width: none;
+    /* remove limit */
+    height: 30vh;
+    /* Taller piano */
+    background: var(--key-white-bg);
+    box-shadow: var(--key-white-shadow);
+    z-index: 1;
+}
+
+.key.white.active {
+    transform: rotateX(-2deg) translateY(2px);
+    background: #ccc;
+    box-shadow: inset 0 -2px 5px rgba(0, 0, 0, 0.2);
+    border-bottom: 4px solid var(--accent-primary);
+}
+
+.key.black {
+    width: 3%;
+    /* Relative to container width */
+    max-width: none;
+    height: 18vh;
+    background: var(--key-black-bg);
+    margin-left: -1.5%;
+    /* Half width overlap */
+    margin-right: -1.5%;
+    z-index: 2;
+    color: #888;
+    box-shadow: var(--key-black-shadow);
+}
+
+.key.black.active {
+    background: #333;
+    transform: rotateX(-3deg) translateY(1px);
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+    border-bottom: 2px solid var(--accent-primary);
+}
+
+/* --- Computer Keyboard Layout Styles --- */
+.keyboard.computer-layout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5vh;
+    padding-top: 120px;
+    width: 98%;
+    /* Fill screen */
+    margin: 0 auto;
+}
+
+.keyboard-row {
+    display: flex;
+    gap: 0.5%;
+    width: 100%;
+    justify-content: center;
 }
 
 .key-cap {
-    width: 50px;
-    height: 50px;
-    /* Base style */
+    /* Use flex to fill row */
+    flex: 1;
+    height: 8vh;
+    /* Height relative to viewport height */
+    max-width: 120px;
+    /* Don't get comically wide on huge screens */
+    min-width: 40px;
+
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: monospace;
-    font-size: 14px;
-    border-radius: 6px;
-    margin: 2px;
-    /* Gap handled by flex gap usually, but margin helps if wrap */
+    font-family: var(--font-mono);
+    font-size: 1.5vh;
+    /* Responsive font */
+    border-radius: 8px;
     cursor: pointer;
     user-select: none;
-    transition: all 0.05s;
-    border: 1px solid #444;
-    box-shadow: 0 4px 0 #222;
+    transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
 }
 
-.key-cap:active,
-.key-cap.active {
-    transform: translateY(4px);
-    box-shadow: 0 0 0 #222;
-}
-
+/* White Cap (Letters) */
 .white-cap {
-    background: #f0f0f0;
-    color: #111;
-    border-color: #ccc;
-    box-shadow: 0 4px 0 #999;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-main);
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.5);
 }
 
 .white-cap:active,
 .white-cap.active {
-    background: #ddd;
-    border-color: #bbb;
-    box-shadow: 0 0 0 #999;
-    /* Collapse shadow */
+    transform: translateY(4px);
+    box-shadow: 0 0 0 transparent;
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+    text-shadow: 0 0 8px var(--accent-primary);
 }
 
+/* Black Cap (Numbers) */
 .black-cap {
-    background: #222;
-    color: #eee;
-    border-color: #000;
-    box-shadow: 0 4px 0 #111;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.8);
 }
 
 .black-cap:active,
 .black-cap.active {
-    background: #333;
-    border-color: #111;
-    box-shadow: 0 0 0 #111;
-    color: #0ff;
-    /* Neon pop for black keys */
+    transform: translateY(4px);
+    box-shadow: 0 0 0 transparent;
+    background: rgba(0, 0, 0, 0.9);
+    border-color: var(--accent-secondary);
+    color: var(--accent-secondary);
+    text-shadow: 0 0 8px var(--accent-secondary);
 }

@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Keyboard-Keyboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <link rel="stylesheet" href="../styles/main.css">
     <!-- Tone.js CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
@@ -14,11 +18,12 @@
         <div id="keyboard-container"></div>
         <div id="controls-overlay"></div>
     </div>
-    <script>
-        console.log('Index loaded', location.href);
-        window.addEventListener('error', e => console.error('Window error:', e.message));
-        window.addEventListener('unhandledrejection', e => console.error('Unhandled rejection:', e.reason));
+    <link rel="modulepreload" href="/src/app.js">
+    <script type="module">
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/public/sw.js');
+        }
+        import '/src/app.js';
     </script>
-    <script type="module" src="/src/app.js"></script>
 </body>
 </html>

@@ -277,16 +277,13 @@ export class UI {
 
         const startOctave = 3;
         const endOctave = 7;
-
-        import('../utils/noteUtils.js').then(({ NOTES }) => {
-            for (let oct = startOctave; oct < endOctave; oct++) {
-                NOTES.forEach((note) => {
-                    this.createPianoKey(note, oct, keyboard);
-                });
-            }
-            this.createPianoKey('C', endOctave, keyboard);
-            this.container.appendChild(keyboard);
-        });
+        for (let oct = startOctave; oct < endOctave; oct++) {
+            NOTES.forEach((note) => {
+                this.createPianoKey(note, oct, keyboard);
+            });
+        }
+        this.createPianoKey('C', endOctave, keyboard);
+        this.container.appendChild(keyboard);
     }
 
     createPianoKey(note, octave, parent) {

@@ -4,7 +4,7 @@ export class PianoInstrument extends BaseInstrument {
     constructor(options = {}) {
         super();
         const profile = options.profile || 'normal';
-        
+
         // Salamander Grand Piano Samples (Lightweight subset)
         this.sampler = new Tone.Sampler({
             urls: {
@@ -44,6 +44,16 @@ export class PianoInstrument extends BaseInstrument {
             onload: () => {
                 console.log("Piano Samples Loaded!");
                 window.dispatchEvent(new CustomEvent('samples-loaded', { detail: { instrument: 'piano' } }));
+            },
+            onerror: (err) => {
+                console.warn("Piano samples failed to load, falling back to synth.", err);
+                // Fallback: Replace sampler with poly synth
+                this.sampler = new Tone.PolySynth(Tone.Synth, {
+                    volume: -8,
+                    oscillator: { type: 'triangle' },
+                    envelope: { attack: 0.05, decay: 0.1, sustain: 0.3, release: 1 }
+                }).toDestination();
+                this.output = this.sampler;
             }
         });
 
@@ -59,7 +69,7 @@ export class PianoInstrument extends BaseInstrument {
             preDelay: 0.1,
             wet: 0.2
         }).toDestination();
-        this.reverb.generate();
+        this._reverbReady = false;
 
         this.sampler.chain(this.eq, this.reverb);
         this.output = this.sampler;
@@ -70,13 +80,13 @@ export class PianoInstrument extends BaseInstrument {
         // Or we can connect sampler -> reverb -> destination.
         // BaseInstrument.connect connects this.output to destination.
         // If this.output is sampler, we bypass reverb if we use base connect.
-        
+
         // Let's set this.output to the last node in our internal chain?
         // But Reverb is global-ish.
-        
+
         // For now, let's just chain: Sampler -> Reverb -> Destination
         // And if the Manager calls connect, we connect Reverb to Destination.
-        
+
         // However, Reverb is expensive to disconnect/reconnect sometimes.
         // Let's just keep it simple:
         this.reverb.disconnect();
@@ -89,6 +99,10 @@ export class PianoInstrument extends BaseInstrument {
 
     noteOn(note, velocity = 1, time) {
         const now = time || Tone.now();
+        if (!this._reverbReady) {
+            this.reverb.generate();
+            this._reverbReady = true;
+        }
         this.sampler.triggerAttack(note, now, velocity);
     }
 
