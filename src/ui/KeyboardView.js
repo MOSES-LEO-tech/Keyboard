@@ -217,7 +217,7 @@ export class UI {
             
             row.forEach(keyCode => {
                 const keyDiv = document.createElement('div');
-                keyDiv.className = 'key-cap';
+                keyDiv.className = `key-cap ${keyCode.startsWith('Digit') ? 'black-cap' : 'white-cap'}`;
                 keyDiv.innerText = this.getKeyLabel(keyCode);
                 keyDiv.dataset.code = keyCode;
                 

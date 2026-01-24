@@ -36,11 +36,16 @@ export class KeyboardLayout {
             'KeyY': { note: 'A', octaveOffset: 1 },
             'KeyU': { note: 'B', octaveOffset: 1 },
 
-            'Digit2': { note: 'C#', octaveOffset: 1 },
-            'Digit3': { note: 'D#', octaveOffset: 1 },
-            'Digit5': { note: 'F#', octaveOffset: 1 },
-            'Digit6': { note: 'G#', octaveOffset: 1 },
-            'Digit7': { note: 'A#', octaveOffset: 1 },
+            'Digit1': { note: 'C#', octaveOffset: 1 },
+            'Digit2': { note: 'D#', octaveOffset: 1 },
+            'Digit3': { note: 'F#', octaveOffset: 1 },
+            'Digit4': { note: 'G#', octaveOffset: 1 },
+            'Digit5': { note: 'A#', octaveOffset: 1 },
+            'Digit6': { note: 'C#', octaveOffset: 2 },
+            'Digit7': { note: 'D#', octaveOffset: 2 },
+            'Digit8': { note: 'F#', octaveOffset: 2 },
+            'Digit9': { note: 'G#', octaveOffset: 2 },
+            'Digit0': { note: 'A#', octaveOffset: 2 },
         };
     }
 

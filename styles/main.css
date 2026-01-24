@@ -130,3 +130,22 @@ label {
     color: white;
     border-color: #005c99;
 }
+
+.key-cap.white-cap {
+    background: #eee;
+    color: #222;
+    border-color: #bbb;
+    box-shadow: 0 4px 0 #aaa;
+}
+
+.key-cap.white-cap.active {
+    background: #d6e9ff;
+    border-color: #99c2ff;
+}
+
+.key-cap.black-cap {
+    background: #333;
+    color: #ccc;
+    border-color: #444;
+    box-shadow: 0 4px 0 #222;
+}

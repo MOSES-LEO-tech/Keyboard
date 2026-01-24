@@ -14,6 +14,11 @@
         <div id="keyboard-container"></div>
         <div id="controls-overlay"></div>
     </div>
-    <script type="module" src="../src/app.js"></script>
+    <script>
+        console.log('Index loaded', location.href);
+        window.addEventListener('error', e => console.error('Window error:', e.message));
+        window.addEventListener('unhandledrejection', e => console.error('Unhandled rejection:', e.reason));
+    </script>
+    <script type="module" src="/src/app.js"></script>
 </body>
 </html>
