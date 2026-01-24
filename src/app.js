@@ -5,7 +5,10 @@ import { StateManager } from './core/StateManager.js';
 import { ModeController } from './core/ModeController.js';
 import { FreePlayMode } from './modes/FreePlayMode.js';
 import { LearnMode } from './modes/LearnMode.js';
+import { LessonMode } from './modes/LessonMode.js';
 import { UI } from './ui/KeyboardView.js';
+import { SongService } from './services/SongService.js';
+import { Sequencer } from './core/Sequencer.js';
 
 console.log('Keyboard-Keyboard initializing...');
 
@@ -15,11 +18,15 @@ const modeController = new ModeController(stateManager);
 const audioEngine = new AudioEngine(stateManager);
 const mappingEngine = new MappingEngine(stateManager);
 const inputEngine = new InputEngine(stateManager);
-const ui = new UI(stateManager, mappingEngine);
+const songService = new SongService();
+const sequencer = new Sequencer(audioEngine);
+
+const ui = new UI(stateManager, mappingEngine, songService);
 
 // Register Modes
 modeController.registerMode('free_play', new FreePlayMode(stateManager));
 modeController.registerMode('learn', new LearnMode(stateManager));
+modeController.registerMode('lesson', new LessonMode(stateManager));
 
 // Set initial mode
 modeController.switchMode('free_play');
@@ -50,5 +57,7 @@ window.app = {
     audio: audioEngine,
     state: stateManager,
     mode: modeController,
-    ui: ui
+    ui: ui,
+    songs: songService,
+    sequencer: sequencer
 };

@@ -1,18 +1,28 @@
 import { NOTES } from '../utils/noteUtils.js';
+import { SongSelectView } from './SongSelectView.js';
+import { KeyStreamView } from './KeyStreamView.js';
 
 export class UI {
-    constructor(stateManager, mappingEngine) {
+    constructor(stateManager, mappingEngine, songService) {
         this.stateManager = stateManager;
         this.mappingEngine = mappingEngine;
+        this.songService = songService;
         this.container = document.getElementById('keyboard-container');
         this.statusBar = document.getElementById('status-bar');
         this.keys = new Map();
+        this.keyStream = null;
 
         this.init();
     }
 
     init() {
         console.log('UI initialized');
+
+        // Setup Visualizer (attached to keyboard container to overlay keys)
+        // Note: keyboard-container is cleared on render, so we might need a persistent text layer?
+        // Or re-create visualizer on render?
+        // Better: renderKeyboard should create the keys container, and visualizer sits on top.
+
         this.renderControls();
 
         // Subscribe to updates
@@ -58,9 +68,11 @@ export class UI {
             mode: document.getElementById('mode-select'),
             layout: document.getElementById('layout-select'),
             labelMode: document.getElementById('label-select'),
-            sustain: document.getElementById('sustain-indicator')
+            sustain: document.getElementById('sustain-indicator'),
+            waitMode: document.getElementById('wait-mode-toggle')
         };
 
+        if (els.waitMode) els.waitMode.checked = state.waitMode;
         if (els.octave) els.octave.innerText = state.octave;
         if (els.instrument) els.instrument.value = state.instrument;
         if (els.mode) els.mode.value = state.mode;
@@ -200,6 +212,13 @@ export class UI {
                     </select>
                 </div>
                 <div class="control-group">
+                    <label>Wait Mode:</label>
+                    <input type="checkbox" id="wait-mode-toggle" checked>
+                </div>
+                <div class="control-group">
+                    <button id="btn-learn-song" style="color: var(--accent-primary); border-color: var(--accent-primary);">♫ Learn Song</button>
+                </div>
+                <div class="control-group">
                     <label>Instrument:</label>
                     <select id="instrument-select">
                         <option value="piano">Piano</option>
@@ -255,9 +274,52 @@ export class UI {
             const current = this.stateManager.getState().octave;
             if (current < 7) this.stateManager.setState({ octave: current + 1 });
         });
+
+        // Wait Mode Toggle
+        const waitToggle = document.getElementById('wait-mode-toggle');
+        if (waitToggle) {
+            waitToggle.addEventListener('change', (e) => {
+                const enabled = e.target.checked;
+                this.stateManager.setState({ waitMode: enabled });
+                window.app.sequencer.setWaitMode(enabled);
+            });
+        }
+
+        // Song Select
+        const btnLearn = document.getElementById('btn-learn-song');
+        if (btnLearn) {
+            btnLearn.addEventListener('click', () => {
+                const view = new SongSelectView(document.body, this.songService, (song) => {
+                    console.log('Selected song:', song);
+
+                    // Switch to Lesson Mode
+                    window.app.mode.switchMode('lesson');
+
+                    // Load and play
+                    window.app.sequencer.loadSong(song);
+                    if (window.app.keyStream) window.app.keyStream.setSong(song);
+
+                    window.app.sequencer.setWaitMode(this.stateManager.getState().waitMode);
+
+                    // Highlight target notes logic
+                    window.app.sequencer.onNoteRequired = (noteName) => {
+                        this.clearTargetHighlights();
+                        const key = this.keys.get(noteName);
+                        if (key) key.classList.add('target-note');
+                    };
+
+                    window.app.sequencer.play();
+                });
+                view.render();
+            });
+        }
     }
 
-    renderKeyboard(layoutName) {
+    clearTargetHighlights() {
+        this.keys.forEach(el => el.classList.remove('target-note'));
+    }
+
+    async renderKeyboard(layoutName) {
         this.currentLayoutName = layoutName;
         this.container.innerHTML = '';
         this.keys.clear();
@@ -265,25 +327,38 @@ export class UI {
         if (layoutName === 'keyboard') {
             this.renderComputerKeyboard();
         } else {
-            this.renderPianoKeyboard();
+            await this.renderPianoKeyboard();
         }
+
+        // Initialize Key Stream Display
+        // KeyStreamView appends itself to container
+        this.keyStream = new KeyStreamView(this.container, this.mappingEngine);
+
+        // Expose for sequencer
+        window.app.keyStream = this.keyStream;
+
         // Initial label update
         this.updateLabels();
     }
 
     renderPianoKeyboard() {
-        const keyboard = document.createElement('div');
-        keyboard.className = 'keyboard piano-layout';
+        return new Promise((resolve) => {
+            const keyboard = document.createElement('div');
+            keyboard.className = 'keyboard piano-layout';
 
-        const startOctave = 3;
-        const endOctave = 7;
-        for (let oct = startOctave; oct < endOctave; oct++) {
-            NOTES.forEach((note) => {
-                this.createPianoKey(note, oct, keyboard);
+            const startOctave = 3;
+            const endOctave = 7;
+            import('../utils/noteUtils.js').then(({ NOTES }) => {
+                for (let oct = startOctave; oct < endOctave; oct++) {
+                    NOTES.forEach((note) => {
+                        this.createPianoKey(note, oct, keyboard);
+                    });
+                }
+                this.createPianoKey('C', endOctave, keyboard);
+                this.container.appendChild(keyboard);
+                resolve();
             });
-        }
-        this.createPianoKey('C', endOctave, keyboard);
-        this.container.appendChild(keyboard);
+        });
     }
 
     createPianoKey(note, octave, parent) {
@@ -428,10 +503,20 @@ export class UI {
             if (event.originalKey) {
                 const key = this.keys.get(event.originalKey);
                 if (key) {
-                    if (isActive) key.classList.add('active');
-                    else key.classList.remove('active');
+                    if (isActive) {
+                        key.classList.add('active');
+                        key.classList.remove('target-note');
+                    } else {
+                        key.classList.remove('active');
+                    }
                 }
             }
+        }
+
+        // Always check piano keys too in case they are mapped but not in focus
+        const pianoKey = this.keys.get(event.fullName);
+        if (pianoKey && isActive) {
+            pianoKey.classList.remove('target-note');
         }
     }
 

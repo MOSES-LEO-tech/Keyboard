@@ -7,7 +7,8 @@ export class StateManager {
             layout: 'piano',
             sustain: false,
             volume: 2.5,
-            labelMode: 'both' // 'pc', 'note', 'both'
+            labelMode: 'both', // 'pc', 'note', 'both'
+            waitMode: true
         };
         this.listeners = [];
         this.loadPrefs();
