@@ -230,7 +230,18 @@ export class UI {
                         <option value="piano">Piano</option>
                         <option value="piano-bright">Piano (Bright)</option>
                         <option value="piano-soft">Piano (Soft)</option>
+                        <option value="piano-dark">Piano (Dark)</option>
+                        <option value="piano-warm">Piano (Warm)</option>
+                        <option value="piano-felt">Felt Piano</option>
+                        <option value="piano-cinematic">Cinematic Piano</option>
+                        <option value="upright-piano">Upright Piano</option>
+                        <option value="piano-honkytonk">Honky-Tonk Piano</option>
                         <option value="electric-piano">Electric Piano</option>
+                        <option value="organ">Organ</option>
+                        <option value="strings">Strings</option>
+                        <option value="pad">Pad</option>
+                        <option value="bass">Bass</option>
+                        <option value="pluck">Pluck</option>
                     </select>
                 </div>
                 <div class="control-group">

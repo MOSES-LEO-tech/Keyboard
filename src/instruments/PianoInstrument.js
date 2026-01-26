@@ -5,7 +5,6 @@ export class PianoInstrument extends BaseInstrument {
         super();
         const profile = options.profile || 'normal';
 
-        // Salamander Grand Piano Samples (Lightweight subset)
         this.sampler = new Tone.Sampler({
             urls: {
                 "A0": "A0.mp3",
@@ -47,7 +46,6 @@ export class PianoInstrument extends BaseInstrument {
             },
             onerror: (err) => {
                 console.warn("Piano samples failed to load, falling back to synth.", err);
-                // Fallback: Replace sampler with poly synth
                 this.sampler = new Tone.PolySynth(Tone.Synth, {
                     volume: -8,
                     oscillator: { type: 'triangle' },
@@ -57,38 +55,64 @@ export class PianoInstrument extends BaseInstrument {
             }
         });
 
-        const eqSettings = {
-            normal: { low: 0, mid: 0, high: 0 },
-            bright: { low: -1, mid: 0, high: 3 },
-            soft: { low: 1, mid: 1, high: -2 }
-        }[profile];
-        this.eq = new Tone.EQ3(eqSettings.low, eqSettings.mid, eqSettings.high);
-
-        this.reverb = new Tone.Reverb({
-            decay: 2.5,
-            preDelay: 0.1,
-            wet: 0.2
-        }).toDestination();
+        const settingsMap = {
+            normal: {
+                eq: { low: 0, mid: 0, high: 0 },
+                reverb: { decay: 2.5, preDelay: 0.1, wet: 0.2 }
+            },
+            bright: {
+                eq: { low: -1, mid: 0, high: 3 },
+                reverb: { decay: 2.3, preDelay: 0.08, wet: 0.18 }
+            },
+            soft: {
+                eq: { low: 1, mid: 1, high: -2 },
+                reverb: { decay: 2.8, preDelay: 0.1, wet: 0.25 },
+                filter: { type: 'lowpass', freq: 1200, q: 0.7 }
+            },
+            dark: {
+                eq: { low: 2, mid: 1, high: -3 },
+                reverb: { decay: 2.2, preDelay: 0.08, wet: 0.15 },
+                filter: { type: 'lowpass', freq: 1000, q: 0.7 }
+            },
+            warm: {
+                eq: { low: 1.5, mid: 0.5, high: -1 },
+                reverb: { decay: 2.4, preDelay: 0.09, wet: 0.18 }
+            },
+            cinematic: {
+                eq: { low: 1, mid: -1, high: 1 },
+                reverb: { decay: 4.0, preDelay: 0.2, wet: 0.35 }
+            },
+            felt: {
+                eq: { low: -1, mid: -1, high: -4 },
+                reverb: { decay: 3.0, preDelay: 0.15, wet: 0.3 },
+                filter: { type: 'lowpass', freq: 900, q: 0.7 }
+            },
+            upright: {
+                eq: { low: 0.5, mid: 1, high: -0.5 },
+                reverb: { decay: 1.8, preDelay: 0.08, wet: 0.2 }
+            },
+            honkytonk: {
+                eq: { low: -2, mid: 0, high: 4 },
+                reverb: { decay: 1.6, preDelay: 0.05, wet: 0.15 }
+            }
+        };
+        const s = settingsMap[profile] || settingsMap.normal;
+        this.eq = new Tone.EQ3(s.eq.low, s.eq.mid, s.eq.high);
+        this.reverb = new Tone.Reverb(s.reverb).toDestination();
+        if (s.filter) {
+            this.filter = new Tone.Filter(s.filter.freq, s.filter.type, s.filter.q ?? 0.7);
+        }
         this._reverbReady = false;
 
-        this.sampler.chain(this.eq, this.reverb);
+        if (this.filter) {
+            this.sampler.chain(this.eq, this.filter, this.reverb);
+        } else {
+            this.sampler.chain(this.eq, this.reverb);
+        }
         this.output = this.sampler;
     }
 
     connect(destination) {
-        // We override connect to ensure the reverb chain is respected.
-        // Or we can connect sampler -> reverb -> destination.
-        // BaseInstrument.connect connects this.output to destination.
-        // If this.output is sampler, we bypass reverb if we use base connect.
-
-        // Let's set this.output to the last node in our internal chain?
-        // But Reverb is global-ish.
-
-        // For now, let's just chain: Sampler -> Reverb -> Destination
-        // And if the Manager calls connect, we connect Reverb to Destination.
-
-        // However, Reverb is expensive to disconnect/reconnect sometimes.
-        // Let's just keep it simple:
         this.reverb.disconnect();
         this.reverb.connect(destination);
     }
