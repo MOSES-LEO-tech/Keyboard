@@ -3,14 +3,16 @@ import { SongSelectView } from './SongSelectView.js';
 import { KeyStreamView } from './KeyStreamView.js';
 
 export class UI {
-    constructor(stateManager, mappingEngine, songService) {
+    constructor(stateManager, mappingEngine, songService, midiService) {
         this.stateManager = stateManager;
         this.mappingEngine = mappingEngine;
         this.songService = songService;
+        this.midiService = midiService; // Store MIDI service
         this.container = document.getElementById('keyboard-container');
         this.statusBar = document.getElementById('status-bar');
         this.keys = new Map();
-        this.keyStream = null;
+        this.lhStream = null;
+        this.rhStream = null;
 
         this.init();
     }
@@ -216,6 +218,10 @@ export class UI {
                     <input type="checkbox" id="wait-mode-toggle" checked>
                 </div>
                 <div class="control-group">
+                    <label>Auto Play:</label>
+                    <input type="checkbox" id="autoplay-toggle">
+                </div>
+                <div class="control-group">
                     <button id="btn-learn-song" style="color: var(--accent-primary); border-color: var(--accent-primary);">♫ Learn Song</button>
                 </div>
                 <div class="control-group">
@@ -285,21 +291,37 @@ export class UI {
             });
         }
 
+        const autoToggle = document.getElementById('autoplay-toggle');
+        if (autoToggle) {
+            autoToggle.addEventListener('change', (e) => {
+                const enabled = e.target.checked;
+                this.stateManager.setState({ autoPlay: enabled });
+                window.app.sequencer.setAutoPlay(enabled);
+            });
+        }
+
         // Song Select
         const btnLearn = document.getElementById('btn-learn-song');
         if (btnLearn) {
             btnLearn.addEventListener('click', () => {
-                const view = new SongSelectView(document.body, this.songService, (song) => {
+                const view = new SongSelectView(document.body, this.songService, this.midiService, (song) => {
                     console.log('Selected song:', song);
+
+                    // Clear previous
+                    this.clearTargetHighlights();
+                    if (window.app.lhStream) window.app.lhStream.clearHighlights();
+                    if (window.app.rhStream) window.app.rhStream.clearHighlights();
 
                     // Switch to Lesson Mode
                     window.app.mode.switchMode('lesson');
 
                     // Load and play
                     window.app.sequencer.loadSong(song);
-                    if (window.app.keyStream) window.app.keyStream.setSong(song);
+                    if (window.app.lhStream) window.app.lhStream.setSong(song);
+                    if (window.app.rhStream) window.app.rhStream.setSong(song);
 
                     window.app.sequencer.setWaitMode(this.stateManager.getState().waitMode);
+                    window.app.sequencer.setAutoPlay(this.stateManager.getState().autoPlay);
 
                     // Highlight target notes logic
                     window.app.sequencer.onNoteRequired = (noteName) => {
@@ -330,12 +352,23 @@ export class UI {
             await this.renderPianoKeyboard();
         }
 
-        // Initialize Key Stream Display
-        // KeyStreamView appends itself to container
-        this.keyStream = new KeyStreamView(this.container, this.mappingEngine);
+        // Initialize Key Stream Displays
+        let streamParent = document.getElementById('streams-wrapper');
+        if (!streamParent) {
+            streamParent = document.createElement('div');
+            streamParent.id = 'streams-wrapper';
+            // Insert after status bar, before keyboard container
+            this.statusBar.after(streamParent);
+        } else {
+            streamParent.innerHTML = '';
+        }
+
+        this.lhStream = new KeyStreamView(streamParent, this.mappingEngine, 'left');
+        this.rhStream = new KeyStreamView(streamParent, this.mappingEngine, 'right');
 
         // Expose for sequencer
-        window.app.keyStream = this.keyStream;
+        window.app.lhStream = this.lhStream;
+        window.app.rhStream = this.rhStream;
 
         // Initial label update
         this.updateLabels();

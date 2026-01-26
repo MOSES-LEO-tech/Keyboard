@@ -21,24 +21,27 @@
 
     /* Accents & Neon */
     --accent-primary: #00f3ff;
-    /* Cyan Neon */
     --accent-secondary: #bc13fe;
-    /* Purple Neon */
     --neon-glow: 0 0 10px rgba(0, 243, 255, 0.5), 0 0 20px rgba(0, 243, 255, 0.3);
 
     /* Keys */
-    --key-white-bg: #e0e0e0;
+    --key-white-bg: #ffffff;
     --key-white-shadow: inset 0 -5px 10px rgba(0, 0, 0, 0.1), 0 2px 5px rgba(0, 0, 0, 0.3);
     --key-black-bg: #1a1a1a;
     --key-black-shadow: inset 0 -2px 5px rgba(255, 255, 255, 0.1), 0 5px 15px rgba(0, 0, 0, 0.5);
 
     /* Spacing */
+    --space-xs: 4px;
     --space-sm: 8px;
     --space-md: 16px;
     --space-lg: 24px;
     --radius-sm: 6px;
     --radius-md: 12px;
     --radius-full: 9999px;
+}
+
+* {
+    box-sizing: border-box;
 }
 
 body {
@@ -48,152 +51,202 @@ body {
     font-family: var(--font-sans);
     margin: 0;
     height: 100vh;
+    width: 100vw;
     overflow: hidden;
-    /* Prevent scroll */
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    /* Center content vertically */
 }
 
+#app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100%;
+}
+
+/* --- Control Bar --- */
 #status-bar {
     width: 100%;
-    padding: var(--space-2-5);
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
+    padding: var(--space-md);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    border-bottom: 1px solid var(--glass-border);
     display: flex;
     justify-content: center;
+    flex-shrink: 0;
+    z-index: 100;
 }
 
 .controls {
     display: flex;
-    gap: var(--space-5);
+    gap: var(--space-lg);
     align-items: center;
 }
 
 .control-group {
     display: flex;
     align-items: center;
-    gap: var(--space-2-5);
+    gap: var(--space-sm);
 }
 
 select,
 button {
-    background: var(--control-bg);
-    color: var(--control-text);
-    border: 1px solid var(--control-border);
-    padding: var(--space-1) var(--space-2);
-    border-radius: var(--radius-1);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-main);
+    border: 1px solid var(--glass-border);
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
+    font-family: var(--font-sans);
+    transition: all 0.2s ease;
 }
 
-select:focus,
-button:focus {
-    outline: 2px solid var(--focus);
+button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-primary);
 }
 
 label {
-    color: var(--muted);
-    font-size: 14px;
-}
-
-/* --- Piano Layout Styles --- */
-.keyboard.piano-layout {
-    display: flex;
-    justify-content: center;
-    position: relative;
-    padding-top: var(--space-5);
-}
-
-.key {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    align-items: center;
-    border: 1px solid #000;
-    box-sizing: border-box;
-    cursor: pointer;
-    user-select: none;
-    transition: background var(--transition-medium);
-}
-
-.key.white {
-    width: 24px;
-    height: 200px;
-    background: var(--white-key-bg);
-    z-index: 1;
-}
-
-.key.white.active {
-    background: var(--white-key-active);
-    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
-}
-
-.key.black {
-    width: 16px;
-    height: 120px;
-    background: var(--black-key-bg);
-    margin-left: -8px;
-    margin-right: -8px;
-    z-index: 2;
-    color: var(--black-key-text);
-    border-radius: 0 0 var(--black-key-radius) var(--black-key-radius);
-}
-
-.key.black.active {
-    background: var(--black-key-active);
-}
-
-.note-label {
-    margin-bottom: 8px;
-    font-size: 11px;
-    color: #000;
-    /* Pure black for white keys */
-    pointer-events: none;
-    font-weight: 800;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
     text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
-.pc-key {
+/* --- Key Stream Display (Flex Integrated) --- */
+#streams-wrapper {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 0;
+    flex-shrink: 0;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.key-stream-container {
+    position: relative;
+    width: 100%;
+    height: 110px;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(25px);
+    border-bottom: 1px solid var(--glass-border);
+    overflow: hidden;
+}
+
+.left-stream {
+    border-left: 6px solid var(--accent-secondary);
+}
+
+.right-stream {
+    border-left: 6px solid var(--accent-primary);
+}
+
+.stream-label {
     position: absolute;
-    bottom: 35px;
-    background: #000;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 2px;
     color: #fff;
-    padding: 2px 6px;
+    z-index: 20;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 4px 8px;
     border-radius: 4px;
-    font-size: 12px;
-    font-family: var(--font-mono);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     pointer-events: none;
+}
+
+.hit-marker {
+    position: absolute;
+    left: 100px;
+    top: 0;
+    width: 3px;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.3);
     z-index: 10;
-    font-weight: bold;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.key.black .pc-key {
-    bottom: 20px;
-    background: #fff;
-    color: #000;
-    box-shadow: 0 2px 4px rgba(255, 255, 255, 0.2);
+.left-stream .hit-marker {
+    background: var(--accent-secondary);
+    box-shadow: 0 0 15px var(--accent-secondary);
 }
 
-.key.black .note-label {
+.right-stream .hit-marker {
+    background: var(--accent-primary);
+    box-shadow: 0 0 15px var(--accent-primary);
+}
+
+.stream-strip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    will-change: transform;
+}
+
+.stream-block {
+    position: absolute;
+    height: 32px;
+    background: rgba(0, 243, 255, 0.1);
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     color: #fff;
-    /* White labels for black keys */
+    font-family: var(--font-mono);
+    box-sizing: border-box;
+    transition: background 0.1s, transform 0.1s;
+    backdrop-filter: blur(5px);
+    padding: 0 8px;
 }
 
-/* --- Computer Keyboard Layout Styles --- */
-.keyboard.computer-layout {
+.stream-block.black-note {
+    background: rgba(188, 19, 254, 0.1);
+    border-color: rgba(188, 19, 254, 0.3);
+}
+
+.stream-block.active {
+    background: var(--accent-primary) !important;
+    color: #000 !important;
+    box-shadow: 0 0 20px var(--accent-primary);
+    border-color: #fff;
+    transform: scale(1.02);
+    z-index: 50;
+}
+
+.left-stream .stream-block.active {
+    background: var(--accent-secondary) !important;
+}
+
+.block-key {
+    font-weight: 800;
+    font-size: 16px;
+}
+
+.block-note {
+    font-size: 10px;
+    opacity: 0.6;
+    font-weight: 400;
+}
+
+/* --- Keyboard Container (Remaining Space) --- */
+#keyboard-container {
+    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: var(--space-1-25);
-    padding: var(--space-10);
-}
-
-.keyboard-row {
-    display: flex;
-    gap: var(--space-1-25);
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    padding: var(--space-md);
 }
 
 /* --- Piano Layout Styles --- */
@@ -201,14 +254,8 @@ label {
     display: flex;
     justify-content: center;
     position: relative;
-    padding-top: 100px;
-    /* Space for control deck */
-    perspective: 1000px;
     width: 100%;
-    /* Ensure it fills width */
-    padding-left: 2vw;
-    padding-right: 2vw;
-    box-sizing: border-box;
+    perspective: 1000px;
 }
 
 .key {
@@ -226,17 +273,9 @@ label {
 }
 
 .key.white {
-    /* ~35 white keys total? Let's assume we want to fit them all or scroll.
-       If we want to fill, we use flex-grow or calc.
-       Let's stick to vw but make it aggressive.
-    */
     flex: 1;
-    /* Grow to fill */
     min-width: 25px;
-    max-width: none;
-    /* remove limit */
     height: 30vh;
-    /* Taller piano */
     background: var(--key-white-bg);
     box-shadow: var(--key-white-shadow);
     z-index: 1;
@@ -251,12 +290,9 @@ label {
 
 .key.black {
     width: 3%;
-    /* Relative to container width */
-    max-width: none;
     height: 18vh;
     background: var(--key-black-bg);
     margin-left: -1.5%;
-    /* Half width overlap */
     margin-right: -1.5%;
     z-index: 2;
     color: #888;
@@ -270,16 +306,45 @@ label {
     border-bottom: 2px solid var(--accent-primary);
 }
 
-/* --- Computer Keyboard Layout Styles --- */
+.note-label {
+    margin-bottom: 8px;
+    font-size: 11px;
+    color: #000;
+    font-weight: 800;
+    pointer-events: none;
+}
+
+.key.black .note-label {
+    color: #fff;
+}
+
+.pc-key {
+    position: absolute;
+    bottom: 35px;
+    background: #000;
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: var(--font-mono);
+    pointer-events: none;
+    z-index: 10;
+    font-weight: bold;
+}
+
+.key.black .pc-key {
+    bottom: 20px;
+    background: #fff;
+    color: #000;
+}
+
+/* --- Computer Layout --- */
 .keyboard.computer-layout {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.5vh;
-    padding-top: 120px;
     width: 98%;
-    /* Fill screen */
-    margin: 0 auto;
 }
 
 .keyboard-row {
@@ -290,29 +355,23 @@ label {
 }
 
 .key-cap {
-    /* Use flex to fill row */
     flex: 1;
     height: 8vh;
-    /* Height relative to viewport height */
     max-width: 120px;
-    /* Don't get comically wide on huge screens */
     min-width: 40px;
-
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: var(--font-mono);
     font-size: 1.5vh;
-    /* Responsive font */
     border-radius: 8px;
     cursor: pointer;
     user-select: none;
-    transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.1s ease;
     position: relative;
     overflow: hidden;
 }
 
-/* White Cap (Letters) */
 .white-cap {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -320,105 +379,96 @@ label {
     box-shadow: 0 4px 0 rgba(0, 0, 0, 0.5);
 }
 
-.white-cap:active,
 .white-cap.active {
     transform: translateY(4px);
     box-shadow: 0 0 0 transparent;
-    background: rgba(255, 255, 255, 0.1);
     border-color: var(--accent-primary);
     color: var(--accent-primary);
-    text-shadow: 0 0 8px var(--accent-primary);
 }
 
-/* Black Cap (Numbers) */
 .black-cap {
     background: rgba(0, 0, 0, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.05);
     color: var(--text-muted);
-    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.8);
 }
 
-.black-cap:active,
 .black-cap.active {
     transform: translateY(4px);
-    box-shadow: 0 0 0 transparent;
-    background: rgba(0, 0, 0, 0.9);
     border-color: var(--accent-secondary);
     color: var(--accent-secondary);
-    text-shadow: 0 0 8px var(--accent-secondary);
 }
 
-/* --- Key Stream Display --- */
-.key-stream-container {
-    position: absolute;
-    top: 90px;
-    /* Below control bar */
-    left: 0;
-    width: 100%;
-    height: 90px;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(20px);
-    border-top: 1px solid var(--glass-border);
-    border-bottom: 1px solid var(--glass-border);
-    overflow: hidden;
-    z-index: 1001;
-    /* High priority */
-}
-
-.hit-marker {
-    position: absolute;
-    left: 100px;
-    top: 0;
-    width: 4px;
-    height: 100%;
-    background: var(--accent-primary);
-    box-shadow: 0 0 15px var(--accent-primary);
-    z-index: 10;
-}
-
-.stream-strip {
-    position: absolute;
+/* --- Modals & Overlays --- */
+.modal-overlay {
+    position: fixed;
     top: 0;
     left: 0;
-    height: 100%;
-    will-change: transform;
-}
-
-.stream-block {
-    position: absolute;
-    top: 15px;
-    height: 60px;
-    background: rgba(0, 243, 255, 0.15);
-    border: 1px solid rgba(0, 243, 255, 0.4);
-    border-radius: 8px;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    color: #fff;
-    font-family: var(--font-mono);
-    box-sizing: border-box;
-    transition: background 0.1s, transform 0.1s;
+    z-index: 2000;
 }
 
-.stream-block.black-note {
-    background: rgba(188, 19, 254, 0.15);
-    border-color: rgba(188, 19, 254, 0.4);
+.modal-glass {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    padding: var(--space-lg);
+    border-radius: var(--radius-md);
+    width: 90%;
+    max-width: 600px;
 }
 
-.stream-block.active {
-    background: var(--accent-primary) !important;
-    color: #000 !important;
-    box-shadow: 0 0 20px var(--accent-primary);
-    border-color: #fff;
+/* --- MIDI Drop Zone --- */
+.drop-zone {
+    background: rgba(255, 255, 255, 0.03);
+    border: 2px dashed rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    text-align: center;
+    margin-bottom: var(--space-md);
+    transition: all 0.2s ease;
+    cursor: pointer;
 }
 
-.block-key {
-    font-weight: 800;
-    font-size: 20px;
+.drop-zone.drag-over {
+    background: rgba(0, 243, 255, 0.05);
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
 }
 
-.block-note {
-    font-size: 11px;
-    opacity: 0.8;
+.drop-icon {
+    font-size: 24px;
+    margin-bottom: 5px;
+}
+
+.drop-text {
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.drop-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.target-note {
+    background: var(--neon-glow) !important;
+    box-shadow: 0 0 20px var(--accent-primary) !important;
+    border-color: #fff !important;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

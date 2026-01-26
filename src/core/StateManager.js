@@ -8,7 +8,8 @@ export class StateManager {
             sustain: false,
             volume: 2.5,
             labelMode: 'both', // 'pc', 'note', 'both'
-            waitMode: true
+            waitMode: true,
+            autoPlay: false
         };
         this.listeners = [];
         this.loadPrefs();

@@ -13,12 +13,17 @@ export class Sequencer {
         this.timerID = null;
 
         this.isWaitMode = true;
+        this.autoPlay = false;
         this.targetNotes = new Set();
         this.onNoteRequired = null;
     }
 
     setWaitMode(enabled) {
         this.isWaitMode = enabled;
+    }
+
+    setAutoPlay(enabled) {
+        this.autoPlay = enabled;
     }
 
     loadSong(song) {
@@ -104,10 +109,9 @@ export class Sequencer {
 
         const currentTime = this.audioEngine.context.now() - this.startTime;
 
-        // Update Horizontal Stream
-        if (window.app.keyStream) {
-            window.app.keyStream.update(currentTime);
-        }
+        // Update Horizontal Streams
+        if (window.app.lhStream) window.app.lhStream.update(currentTime);
+        if (window.app.rhStream) window.app.rhStream.update(currentTime);
 
         const lookAhead = 0.05; // Tighten lookahead for wait mode
 
@@ -117,7 +121,7 @@ export class Sequencer {
             if (event.time <= currentTime + lookAhead) {
                 if (event.type === 'noteOn') {
                     // Check for Wait Mode
-                    if (this.isWaitMode) {
+                    if (this.isWaitMode && !this.autoPlay) {
                         this.targetNotes.add(event.note);
                         this.cursor++;
                         if (this.onNoteRequired) this.onNoteRequired(event.note);
