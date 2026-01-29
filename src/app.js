@@ -6,8 +6,10 @@ import { ModeController } from './core/ModeController.js';
 import { FreePlayMode } from './modes/FreePlayMode.js';
 import { LearnMode } from './modes/LearnMode.js';
 import { LessonMode } from './modes/LessonMode.js';
+import { GuidedMode } from './modes/GuidedMode.js';
 import { UI } from './ui/KeyboardView.js';
 import { SongService } from './services/SongService.js';
+import { SongLibraryService } from './services/SongLibraryService.js';
 import { MidiService } from './services/MidiService.js';
 import { Sequencer } from './core/Sequencer.js';
 
@@ -21,14 +23,16 @@ const mappingEngine = new MappingEngine(stateManager);
 const inputEngine = new InputEngine(stateManager);
 const songService = new SongService();
 const midiService = new MidiService();
-const sequencer = new Sequencer(audioEngine);
+const libraryService = new SongLibraryService(songService);
+const sequencer = new Sequencer(audioEngine, stateManager);
 
-const ui = new UI(stateManager, mappingEngine, songService, midiService);
+const ui = new UI(stateManager, mappingEngine, songService, midiService, libraryService);
 
 // Register Modes
 modeController.registerMode('free_play', new FreePlayMode(stateManager));
 modeController.registerMode('learn', new LearnMode(stateManager));
 modeController.registerMode('lesson', new LessonMode(stateManager));
+modeController.registerMode('guided', new GuidedMode(stateManager, sequencer, ui));
 
 // Set initial mode
 modeController.switchMode('free_play');
@@ -45,6 +49,11 @@ mappingEngine.setNoteHandler((noteEvent) => {
     if (processedEvent) {
         console.log('Playing Note:', processedEvent);
         audioEngine.handleNote(processedEvent);
+
+        // Notify Sequencer to advance if in Wait Mode
+        if (processedEvent.type === 'noteOn') {
+            sequencer.advance(processedEvent.fullName);
+        }
 
         // Update UI
         // Use new handler that respects layout and event data

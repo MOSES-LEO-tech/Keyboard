@@ -1,15 +1,20 @@
 export class StateManager {
     constructor() {
         this.state = {
-            octave: 4,
             instrument: 'piano',
-            mode: 'free_play',
-            layout: 'piano',
-            sustain: false,
             volume: 2.5,
-            labelMode: 'both', // 'pc', 'note', 'both'
+            octave: 4,
+            sustain: false,
+            layout: 'piano', // 'piano' or 'keyboard'
+            mode: 'free_play',
+            labelMode: 'both', // 'none', 'note', 'pc', 'both'
             waitMode: true,
-            autoPlay: false
+            autoPlay: false,
+            
+            // New Features
+            speed: 1.0,
+            difficulty: 'hard', // 'easy', 'medium', 'hard'
+            hybridMode: false,
         };
         this.listeners = [];
         this.loadPrefs();

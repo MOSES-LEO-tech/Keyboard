@@ -13,7 +13,8 @@ export class PadInstrument extends BaseInstrument {
                 envelope: { attack: 0.6, decay: 0.3, sustain: 0.7, release: 3.2 }
             }
         });
-        this.filter = new Tone.Filter(1200, 'lowpass', 0.7);
+        this.filter = new Tone.Filter(1200, 'lowpass', -12);
+        this.filter.Q.value = 0.7; // Set Q value separately
         this.reverb = new Tone.Reverb({ decay: 4.5, preDelay: 0.2, wet: 0.4 });
         this.delay = new Tone.FeedbackDelay('8n', 0.2);
         this.poly.chain(this.filter, this.delay, this.reverb);

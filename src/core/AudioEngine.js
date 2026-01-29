@@ -17,11 +17,9 @@ export class AudioEngine {
     }
 
     async init() {
-        console.log('AudioEngine: Initializing Tone.js...');
-
         // Wait for Tone.js to be available (if loaded via CDN async)
         if (typeof Tone === 'undefined') {
-            console.error('Tone.js library not found! Make sure it is included in index.html');
+            console.error('Tone.js library not found!');
             return;
         }
 
@@ -33,7 +31,12 @@ export class AudioEngine {
         this.masterGain.connect(this.limiter);
 
         // Instrument Manager
-        this.instrumentManager = new InstrumentManager(this.context, this.masterGain);
+        try {
+            this.instrumentManager = new InstrumentManager(this.context, this.masterGain);
+        } catch (error) {
+            console.error('Error creating InstrumentManager:', error);
+            return;
+        }
 
         // Subscribe to State Changes (instrument, sustain)
         this.stateManager.subscribe(state => {
@@ -60,6 +63,7 @@ export class AudioEngine {
         });
 
         this.isInitialized = true;
+        console.log('AudioEngine initialized');
     }
 
     async resumeContext() {
@@ -70,7 +74,10 @@ export class AudioEngine {
     }
 
     async handleNote(noteEvent) {
-        if (!this.isInitialized) return;
+        if (!this.isInitialized) {
+            console.warn('AudioEngine not initialized yet');
+            return;
+        }
         try {
             await this.resumeContext();
         } catch (e) {
@@ -80,9 +87,10 @@ export class AudioEngine {
 
         const instrument = this.instrumentManager.getCurrent();
         if (!instrument) {
-            console.warn('No current instrument to play note', noteEvent);
+            console.error('AudioEngine: No current instrument!');
             return;
         }
+        console.log('AudioEngine: Playing note', noteEvent.fullName, 'on instrument', instrument.constructor.name);
 
         if (noteEvent.type === 'noteOn') {
             if (noteEvent.inputTime) {
@@ -98,14 +106,16 @@ export class AudioEngine {
                 }
             }
             this.sustainedNotes.delete(noteEvent.fullName);
-            console.log('NoteOn', noteEvent.fullName, 'vel', noteEvent.velocity);
-            instrument.noteOn(noteEvent.fullName, noteEvent.velocity ?? 1);
+            // console.log('NoteOn', noteEvent.fullName, 'vel', noteEvent.velocity);
+
+            // Pass explicit time if available (for Lookahead Scheduling)
+            instrument.noteOn(noteEvent.fullName, noteEvent.velocity ?? 1, noteEvent.time);
         } else if (noteEvent.type === 'noteOff') {
             if (this.sustain) {
                 this.sustainedNotes.add(noteEvent.fullName);
             } else {
-                console.log('NoteOff', noteEvent.fullName);
-                instrument.noteOff(noteEvent.fullName);
+                // console.log('NoteOff', noteEvent.fullName);
+                instrument.noteOff(noteEvent.fullName, noteEvent.time);
             }
         }
     }

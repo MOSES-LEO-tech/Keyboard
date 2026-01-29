@@ -12,7 +12,7 @@ export class InstrumentManager {
         this.destination = destination;
         this.currentInstrument = null;
         this.instruments = new Map();
-        
+
         // Pre-register core instruments
         this.registerInstrument('piano', new PianoInstrument());
         this.registerInstrument('piano-bright', new PianoInstrument({ profile: 'bright' }));
@@ -29,7 +29,7 @@ export class InstrumentManager {
         this.registerInstrument('pad', new PadInstrument());
         this.registerInstrument('bass', new BassInstrument());
         this.registerInstrument('pluck', new PluckInstrument());
-        
+
         // Default
         this.switchTo('piano');
     }
@@ -45,7 +45,7 @@ export class InstrumentManager {
         }
 
         const newInstrument = this.instruments.get(name);
-        
+
         // Disconnect old
         if (this.currentInstrument) {
             this.currentInstrument.disconnect();

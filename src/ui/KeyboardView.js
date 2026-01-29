@@ -1,18 +1,19 @@
 import { NOTES } from '../utils/noteUtils.js';
 import { SongSelectView } from './SongSelectView.js';
+import { SongBrowserView } from './SongBrowserView.js';
 import { KeyStreamView } from './KeyStreamView.js';
 
 export class UI {
-    constructor(stateManager, mappingEngine, songService, midiService) {
+    constructor(stateManager, mappingEngine, songService, midiService, libraryService) {
         this.stateManager = stateManager;
         this.mappingEngine = mappingEngine;
         this.songService = songService;
-        this.midiService = midiService; // Store MIDI service
+        this.midiService = midiService;
+        this.libraryService = libraryService;
         this.container = document.getElementById('keyboard-container');
         this.statusBar = document.getElementById('status-bar');
         this.keys = new Map();
-        this.lhStream = null;
-        this.rhStream = null;
+        this.mainStream = null; // Unified Stream
 
         this.init();
     }
@@ -20,20 +21,11 @@ export class UI {
     init() {
         console.log('UI initialized');
 
-        // Setup Visualizer (attached to keyboard container to overlay keys)
-        // Note: keyboard-container is cleared on render, so we might need a persistent text layer?
-        // Or re-create visualizer on render?
-        // Better: renderKeyboard should create the keys container, and visualizer sits on top.
-
         this.renderControls();
 
         // Subscribe to updates
         this.stateManager.subscribe(state => {
             this.updateControls(state);
-            // If layout changes, re-render keyboard
-            // We need to know if layout changed.
-            // Ideally StateManager provides prev state or diff.
-            // For now, we'll just check against a stored value or re-render if needed.
             if (this.currentLayoutName !== state.layout) {
                 this.renderKeyboard(state.layout);
             }
@@ -49,7 +41,7 @@ export class UI {
             if (el) el.innerText = 'Ready';
         });
 
-        // Visual Shift Indicator logic
+        // Shift Indicator
         const toggleShift = (isActive) => {
             const el = document.getElementById('shift-indicator');
             if (el) {
@@ -71,7 +63,10 @@ export class UI {
             layout: document.getElementById('layout-select'),
             labelMode: document.getElementById('label-select'),
             sustain: document.getElementById('sustain-indicator'),
-            waitMode: document.getElementById('wait-mode-toggle')
+            waitMode: document.getElementById('wait-mode-toggle'),
+            speed: document.getElementById('speed-slider'),
+            speedVal: document.getElementById('speed-value'),
+            difficulty: document.getElementById('difficulty-select')
         };
 
         if (els.waitMode) els.waitMode.checked = state.waitMode;
@@ -82,51 +77,39 @@ export class UI {
         if (els.labelMode) els.labelMode.value = state.labelMode;
         if (els.sustain) els.sustain.innerText = state.sustain ? 'Sustain: On' : 'Sustain: Off';
 
-        // State updates often imply label updates (e.g. Octave change, Label Mode change)
+        if (els.speed) {
+            els.speed.value = state.speed;
+            els.speedVal.innerText = `${Math.round(state.speed * 100)}%`;
+        }
+        if (els.difficulty) els.difficulty.value = state.difficulty;
+
         this.updateLabels();
     }
 
     updateLabels() {
         const state = this.stateManager.getState();
         const layoutManager = this.mappingEngine.getLayoutManager();
-        // Use keyboard layout as the reference for PC keys (since PianoLayout delegates anyway)
         const refLayout = layoutManager.layouts.get('keyboard');
-
-        // Current Rendered Mode
         const isPianoView = this.currentLayoutName === 'piano';
-
-        // Current Modifiers/Octave
         const modifiers = { shiftKey: this.isShiftActive || false };
         const octave = state.octave || 4;
 
         if (isPianoView) {
-            // PIANO VIEW LABEL LOGIC
-            // Clear all special labels first (keep basic note labels if we want?)
             this.keys.forEach((el, noteFullName) => {
-                // If labelMode is 'note' or 'both', show note label?
-                // The basic note label is usually static (C4).
-                // Let's assume we overwrite innerText or specific label container.
-
                 let content = '';
-                // 1. Note Label
                 if (state.labelMode === 'note' || state.labelMode === 'both') {
                     content += `<div class="note-name">${noteFullName}</div>`;
                 }
-
-                // 2. PC Key Label (Reverse Lookup)
                 if (state.labelMode === 'pc' || state.labelMode === 'both') {
-                    // Check if any PC key maps to this noteFullName given current octave/shift
                     const pcKeys = [...refLayout.whiteKeys, ...refLayout.blackKeys];
                     let mappedKey = null;
-
                     for (const code of pcKeys) {
                         const m = refLayout.map(code, octave, modifiers);
                         if (m && m.fullName === noteFullName) {
                             mappedKey = this.getKeyLabel(code);
-                            break; // Stop at first match
+                            break;
                         }
                     }
-
                     if (mappedKey) {
                         content += `<div class="pc-key">${mappedKey}</div>`;
                     }
@@ -135,23 +118,16 @@ export class UI {
             });
 
         } else {
-            // KEYBOARD VIEW LABEL LOGIC
             this.keys.forEach((el, code) => {
                 const mapping = refLayout.map(code, octave, modifiers);
-
                 let top = '';
                 let bottom = '';
-
-                // Top: PC Key
                 if (state.labelMode === 'pc' || state.labelMode === 'both') {
                     top = this.getKeyLabel(code);
                 }
-
-                // Bottom: Note
                 if (state.labelMode === 'note' || state.labelMode === 'both') {
-                    if (mapping) bottom = mapping.note + mapping.octave; // e.g. C#4
+                    if (mapping) bottom = mapping.note + mapping.octave;
                 }
-
                 el.innerHTML = `
                     <div style="font-size: 0.7em; opacity: 0.8">${top}</div>
                     <div style="font-weight: bold">${bottom}</div>
@@ -163,7 +139,7 @@ export class UI {
     renderControls() {
         if (!this.statusBar) return;
 
-        // Listeners
+        // Shift Listener
         const toggleShift = (isActive) => {
             this.isShiftActive = isActive;
             const el = document.getElementById('shift-indicator');
@@ -183,14 +159,22 @@ export class UI {
             <div id="sustain-indicator">Sustain: Off</div>
             <div id="shift-indicator" style="opacity: 0.3">Shift: Off</div>
             <div class="controls">
+                <!-- SPEED -->
                 <div class="control-group">
-                    <label>Room:</label>
-                    <input id="room-slider" type="range" min="0" max="1" step="0.01" value="0.2" />
+                    <label>Speed:</label>
+                    <input id="speed-slider" type="range" min="0.25" max="2.0" step="0.05" value="1.0" />
+                    <span id="speed-value" style="width: 40px; text-align:right">100%</span>
                 </div>
+                 <!-- DIFFICULTY -->
                 <div class="control-group">
-                    <label>Brightness:</label>
-                    <input id="brightness-slider" type="range" min="0" max="1" step="0.01" value="0.5" />
+                    <label>Difficulty:</label>
+                    <select id="difficulty-select">
+                        <option value="easy">Easy</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard" selected>Hard</option>
+                    </select>
                 </div>
+
                 <div class="control-group">
                     <label>Layout:</label>
                     <select id="layout-select">
@@ -199,14 +183,7 @@ export class UI {
                     </select>
                 </div>
                 <div class="control-group">
-                    <label>Mode:</label>
-                    <select id="mode-select">
-                        <option value="free_play">Free Play</option>
-                        <option value="learn">Learn (C Major)</option>
-                    </select>
-                </div>
-                <div class="control-group">
-                    <label>Labels:</label>
+                     <label>Labels:</label>
                     <select id="label-select">
                         <option value="both">Both</option>
                         <option value="pc">PC Keys</option>
@@ -214,29 +191,27 @@ export class UI {
                     </select>
                 </div>
                 <div class="control-group">
-                    <label>Wait Mode:</label>
-                    <input type="checkbox" id="wait-mode-toggle" checked>
+                    <label>Mode:</label>
+                    <select id="playback-mode-select">
+                        <option value="practice">Practice (Wait)</option>
+                        <option value="listen">Listen (Auto)</option>
+                    </select>
                 </div>
+                <!-- REMOVED OLD WAIT TOGGLE -->
+                
                 <div class="control-group">
-                    <label>Auto Play:</label>
-                    <input type="checkbox" id="autoplay-toggle">
+                    <button id="btn-play-pause" style="width: 40px; font-size: 1.2em;">▶</button>
                 </div>
                 <div class="control-group">
                     <button id="btn-learn-song" style="color: var(--accent-primary); border-color: var(--accent-primary);">♫ Learn Song</button>
                 </div>
-                <div class="control-group">
-                    <label>Instrument:</label>
+                 <div class="control-group">
+                    <label>Inst:</label>
                     <select id="instrument-select">
-                        <option value="piano">Piano</option>
+                         <option value="piano">Piano</option>
                         <option value="piano-bright">Piano (Bright)</option>
                         <option value="piano-soft">Piano (Soft)</option>
-                        <option value="piano-dark">Piano (Dark)</option>
-                        <option value="piano-warm">Piano (Warm)</option>
-                        <option value="piano-felt">Felt Piano</option>
-                        <option value="piano-cinematic">Cinematic Piano</option>
-                        <option value="upright-piano">Upright Piano</option>
-                        <option value="piano-honkytonk">Honky-Tonk Piano</option>
-                        <option value="electric-piano">Electric Piano</option>
+                        <option value="electric-piano">E. Piano</option>
                         <option value="organ">Organ</option>
                         <option value="strings">Strings</option>
                         <option value="pad">Pad</option>
@@ -258,99 +233,253 @@ export class UI {
             this.stateManager.setState({ layout: e.target.value });
             e.target.blur();
         });
-
-        document.getElementById('mode-select').addEventListener('change', (e) => {
-            this.stateManager.setState({ mode: e.target.value });
-            e.target.blur();
-        });
-
         document.getElementById('label-select').addEventListener('change', (e) => {
             this.stateManager.setState({ labelMode: e.target.value });
             e.target.blur();
         });
-
         document.getElementById('instrument-select').addEventListener('change', (e) => {
             this.stateManager.setState({ instrument: e.target.value });
             e.target.blur();
         });
-        document.getElementById('room-slider').addEventListener('input', (e) => {
-            const v = parseFloat(e.target.value);
-            window.app.audio.setRoom(v);
-        });
-        document.getElementById('brightness-slider').addEventListener('input', (e) => {
-            const v = parseFloat(e.target.value);
-            window.app.audio.setBrightness(v);
-        });
-
         document.getElementById('octave-down').addEventListener('click', () => {
             const current = this.stateManager.getState().octave;
             if (current > 1) this.stateManager.setState({ octave: current - 1 });
         });
-
         document.getElementById('octave-up').addEventListener('click', () => {
             const current = this.stateManager.getState().octave;
             if (current < 7) this.stateManager.setState({ octave: current + 1 });
         });
 
-        // Wait Mode Toggle
-        const waitToggle = document.getElementById('wait-mode-toggle');
-        if (waitToggle) {
-            waitToggle.addEventListener('change', (e) => {
-                const enabled = e.target.checked;
-                this.stateManager.setState({ waitMode: enabled });
-                window.app.sequencer.setWaitMode(enabled);
+        // New Controls
+        document.getElementById('speed-slider').addEventListener('input', (e) => {
+            const s = parseFloat(e.target.value);
+            document.getElementById('speed-value').innerText = `${Math.round(s * 100)}%`;
+            this.stateManager.setState({ speed: s });
+        });
+        document.getElementById('difficulty-select').addEventListener('change', (e) => {
+            this.stateManager.setState({ difficulty: e.target.value });
+            e.target.blur();
+        });
+
+        // Play Pause
+        const btnPlay = document.getElementById('btn-play-pause');
+        if (btnPlay) {
+            btnPlay.addEventListener('click', () => {
+                const seq = window.app.sequencer;
+                if (!seq) return;
+
+                if (seq.isPlaying) {
+                    seq.pause();
+                    btnPlay.innerText = '▶';
+                } else {
+                    seq.play();
+                    btnPlay.innerText = '⏸';
+                }
             });
         }
 
-        const autoToggle = document.getElementById('autoplay-toggle');
-        if (autoToggle) {
-            autoToggle.addEventListener('change', (e) => {
-                const enabled = e.target.checked;
-                this.stateManager.setState({ autoPlay: enabled });
-                window.app.sequencer.setAutoPlay(enabled);
+        // Playback Mode (Practice vs Listen)
+        const modeSelect = document.getElementById('playback-mode-select');
+        if (modeSelect) {
+            // Set initial value based on state
+            const s = this.stateManager.getState();
+            if (s.autoPlay) modeSelect.value = 'listen';
+            else modeSelect.value = 'practice';
+
+            modeSelect.addEventListener('change', (e) => {
+                const mode = e.target.value;
+                if (mode === 'listen') {
+                    this.stateManager.setState({ waitMode: false, autoPlay: true });
+                    window.app.sequencer.setWaitMode(false);
+                    window.app.sequencer.setAutoPlay(true);
+                } else {
+                    this.stateManager.setState({ waitMode: true, autoPlay: false });
+                    window.app.sequencer.setWaitMode(true);
+                    window.app.sequencer.setAutoPlay(false);
+                }
+                e.target.blur();
             });
         }
+
+        /*
+        // Wait Mode (Removed in favor of Mode Select)
+        document.getElementById('wait-mode-toggle').addEventListener('change', (e) => {
+             this.stateManager.setState({ waitMode: e.target.checked });
+            window.app.sequencer.setWaitMode(e.target.checked);
+        });
+        */
 
         // Song Select
         const btnLearn = document.getElementById('btn-learn-song');
         if (btnLearn) {
             btnLearn.addEventListener('click', () => {
-                const view = new SongSelectView(document.body, this.songService, this.midiService, (song) => {
-                    console.log('Selected song:', song);
-
-                    // Clear previous
-                    this.clearTargetHighlights();
-                    if (window.app.lhStream) window.app.lhStream.clearHighlights();
-                    if (window.app.rhStream) window.app.rhStream.clearHighlights();
-
-                    // Switch to Lesson Mode
-                    window.app.mode.switchMode('lesson');
-
-                    // Load and play
-                    window.app.sequencer.loadSong(song);
-                    if (window.app.lhStream) window.app.lhStream.setSong(song);
-                    if (window.app.rhStream) window.app.rhStream.setSong(song);
-
-                    window.app.sequencer.setWaitMode(this.stateManager.getState().waitMode);
-                    window.app.sequencer.setAutoPlay(this.stateManager.getState().autoPlay);
-
-                    // Highlight target notes logic
-                    window.app.sequencer.onNoteRequired = (noteName) => {
+                const view = new SongBrowserView(
+                    document.body,
+                    this.songService,
+                    this.libraryService,
+                    (song) => {
+                        console.log('Selected song:', song);
                         this.clearTargetHighlights();
-                        const key = this.keys.get(noteName);
-                        if (key) key.classList.add('target-note');
-                    };
+                        this.hideGuidedIndicator();
+                        this.hideProgressBar();
+                        if (window.app.mainStream) window.app.mainStream.clearHighlights();
 
-                    window.app.sequencer.play();
-                });
+                        // Switch to guided mode for practice
+                        window.app.mode.switchMode('guided');
+                        window.app.sequencer.loadSong(song);
+                        if (window.app.mainStream) window.app.mainStream.setSong(song);
+
+                        // Enable wait mode by default for guided mode
+                        this.stateManager.setState({ waitMode: true, autoPlay: false });
+                        window.app.sequencer.setWaitMode(true);
+                        window.app.sequencer.setAutoPlay(false);
+
+                        // Setup Note Required Hook with new on-key guidance
+                        // ONLY for non-guided modes (GuidedMode handles its own callback)
+                        if (window.app.mode.name !== 'guided') {
+                            window.app.sequencer.onNoteRequired = (noteNames) => {
+                                this.clearTargetHighlights();
+
+                                // Ensure noteNames is an array
+                                const notes = Array.isArray(noteNames) ? noteNames : [noteNames];
+
+                                // Show on-key guidance
+                                this.highlightNextNote(notes);
+
+                                // Show guided indicator
+                                if (notes.length > 1) {
+                                    this.showGuidedIndicator('Play these notes together');
+                                } else {
+                                    this.showGuidedIndicator('Play the highlighted note');
+                                }
+
+                                // Update progress bar
+                                if (window.app.sequencer.totalEvents) {
+                                    const current = window.app.sequencer.cursor || 0;
+                                    this.updateProgressBar(current, window.app.sequencer.totalEvents);
+                                }
+                            };
+                        } else {
+                            console.log('[KeyboardView] Skipping onNoteRequired setup - GuidedMode will handle it');
+                        }
+
+                        // Show initial progress bar
+                        const totalNotes = song.tracks.reduce((sum, t) => sum + t.notes.length, 0);
+                        this.showProgressBar(0, totalNotes, song.title);
+
+                        window.app.sequencer.play();
+                    });
                 view.render();
             });
         }
     }
 
     clearTargetHighlights() {
-        this.keys.forEach(el => el.classList.remove('target-note'));
+        this.keys.forEach(el => el.classList.remove('target-note', 'next-note', 'chord-note', 'correct-note', 'wrong-note'));
     }
+
+    // --- On-Key Guidance Methods ---
+    highlightNextNote(noteNames) {
+        console.log('[UI] 🎹 highlightNextNote called with:', noteNames);
+
+        // Clear all highlights first
+        this.clearTargetHighlights();
+
+        // Highlight the target notes
+        if (!Array.isArray(noteNames)) {
+            noteNames = [noteNames];
+        }
+
+        console.log('[UI] 🎯 Highlighting notes:', noteNames);
+
+        noteNames.forEach(noteName => {
+            const el = this.keys.get(noteName);
+            if (el) {
+                el.classList.add(noteNames.length > 1 ? 'chord-note' : 'next-note');
+                console.log('[UI] ✅ Highlighted key:', noteName);
+            } else {
+                console.warn('[UI] ⚠️ Key not found for note:', noteName);
+            }
+        });
+    }
+
+    clearHighlights() {
+        this.keys.forEach(el => {
+            el.classList.remove('next-note', 'chord-note', 'correct-note', 'wrong-note');
+        });
+    }
+
+    showCorrectNote(noteName) {
+        const el = this.keys.get(noteName);
+        if (el) {
+            el.classList.add('correct-note');
+            setTimeout(() => el.classList.remove('correct-note'), 300);
+        }
+    }
+
+    showWrongNote(noteName) {
+        const el = this.keys.get(noteName);
+        if (el) {
+            el.classList.add('wrong-note');
+            setTimeout(() => el.classList.remove('wrong-note'), 300);
+        }
+    }
+
+    showGuidedIndicator(message) {
+        // Remove existing indicator
+        const existing = document.querySelector('.guided-indicator');
+        if (existing) existing.remove();
+
+        const indicator = document.createElement('div');
+        indicator.className = 'guided-indicator';
+        indicator.innerHTML = `<span class="dot"></span>${message || 'Play the highlighted note'}`;
+        document.body.appendChild(indicator);
+
+        return indicator;
+    }
+
+    hideGuidedIndicator() {
+        const existing = document.querySelector('.guided-indicator');
+        if (existing) existing.remove();
+    }
+
+    showProgressBar(currentNote, totalNotes, songTitle) {
+        // Remove existing progress bar
+        const existing = document.querySelector('.song-progress-container');
+        if (existing) existing.remove();
+
+        const progress = document.createElement('div');
+        progress.className = 'song-progress-container';
+        progress.innerHTML = `
+            <div class="song-progress-bar">
+                <div class="song-progress-fill" style="width: ${(currentNote / totalNotes) * 100}%"></div>
+            </div>
+            <div class="song-progress-info">
+                <span>${songTitle}</span>
+                <span>${currentNote}/${totalNotes} notes</span>
+            </div>
+        `;
+        document.body.appendChild(progress);
+
+        return progress;
+    }
+
+    updateProgressBar(currentNote, totalNotes) {
+        const fill = document.querySelector('.song-progress-fill');
+        const info = document.querySelector('.song-progress-info span:last-child');
+        if (fill) {
+            fill.style.width = `${(currentNote / totalNotes) * 100}%`;
+        }
+        if (info) {
+            info.textContent = `${currentNote}/${totalNotes} notes`;
+        }
+    }
+
+    hideProgressBar() {
+        const existing = document.querySelector('.song-progress-container');
+        if (existing) existing.remove();
+    }
+
 
     async renderKeyboard(layoutName) {
         this.currentLayoutName = layoutName;
@@ -363,25 +492,19 @@ export class UI {
             await this.renderPianoKeyboard();
         }
 
-        // Initialize Key Stream Displays
+        // Initialize Unified Key Stream Display
         let streamParent = document.getElementById('streams-wrapper');
         if (!streamParent) {
             streamParent = document.createElement('div');
             streamParent.id = 'streams-wrapper';
-            // Insert after status bar, before keyboard container
             this.statusBar.after(streamParent);
         } else {
             streamParent.innerHTML = '';
         }
 
-        this.lhStream = new KeyStreamView(streamParent, this.mappingEngine, 'left');
-        this.rhStream = new KeyStreamView(streamParent, this.mappingEngine, 'right');
+        this.mainStream = new KeyStreamView(streamParent, this.mappingEngine);
+        window.app.mainStream = this.mainStream;
 
-        // Expose for sequencer
-        window.app.lhStream = this.lhStream;
-        window.app.rhStream = this.rhStream;
-
-        // Initial label update
         this.updateLabels();
     }
 
@@ -437,8 +560,6 @@ export class UI {
     renderComputerKeyboard() {
         const keyboard = document.createElement('div');
         keyboard.className = 'keyboard computer-layout';
-
-        // Retrieve Visual Model
         const layoutManager = this.mappingEngine.getLayoutManager();
         const layout = layoutManager.layouts.get('keyboard');
         const model = layout.getVisualModel();
@@ -448,28 +569,19 @@ export class UI {
             rowDiv.className = 'keyboard-row';
 
             row.forEach(keyCode => {
-                // Determine styling based on layout definitions
                 const isBlack = layout.blackKeys.includes(keyCode);
-
                 const keyDiv = document.createElement('div');
                 keyDiv.className = `key-cap ${isBlack ? 'black-cap' : 'white-cap'}`;
-
-                // Determine Label (Note Name)
-                // We use a base octave of 4 just to get the Note Name (C, C#, etc)
                 const mapping = layout.map(keyCode, 4);
                 keyDiv.innerText = mapping ? mapping.note : this.getKeyLabel(keyCode);
-
                 keyDiv.dataset.code = keyCode;
-
                 this.keys.set(keyCode, keyDiv);
 
+                // Event Listeners (omitted for brevity, same as before)
                 const down = (e) => {
                     e.preventDefault();
                     const octave = this.stateManager.getState().octave || 4;
-                    // Pass current modifiers from the DOM event if available, or rely on InputEngine?
-                    // The UI click event doesn't carry keyboard modifiers usually unless we check e.shiftKey
                     const modifiers = { shiftKey: e.shiftKey };
-
                     const info = layoutManager.getNoteFromKey(keyCode, octave, modifiers);
                     if (!info) return;
                     this.dispatchNote('noteOn', { fullName: info.fullName, originalKey: keyCode });
@@ -478,7 +590,6 @@ export class UI {
                     e.preventDefault();
                     const octave = this.stateManager.getState().octave || 4;
                     const modifiers = { shiftKey: e.shiftKey };
-
                     const info = layoutManager.getNoteFromKey(keyCode, octave, modifiers);
                     if (!info) return;
                     this.dispatchNote('noteOff', { fullName: info.fullName, originalKey: keyCode });
@@ -488,62 +599,45 @@ export class UI {
                 keyDiv.addEventListener('mouseleave', up);
                 keyDiv.addEventListener('touchstart', down, { passive: false });
                 keyDiv.addEventListener('touchend', up, { passive: false });
+
                 rowDiv.appendChild(keyDiv);
             });
-
             keyboard.appendChild(rowDiv);
         });
-
         this.container.appendChild(keyboard);
     }
 
     getKeyLabel(code) {
         if (code.startsWith('Key')) return code.replace('Key', '');
         if (code.startsWith('Digit')) return code.replace('Digit', '');
-        return code;
+
+        const symbolMap = {
+            'Equal': '=',
+            'Minus': '-',
+            'BracketLeft': '[',
+            'BracketRight': ']',
+            'Backslash': '\\',
+            'Semicolon': ';',
+            'Quote': "'",
+            'Comma': ',',
+            'Period': '.',
+            'Slash': '/',
+            'Backquote': '`'
+        };
+        return symbolMap[code] || code;
     }
 
-    setNoteState(noteOrCode, isActive) {
-        // If in Piano mode, we look up by Note Name (C4)
-        // If in Keyboard mode, we look up by Key Code? 
-        // Actually, App passes us "fullName" (C4) usually.
-        // But MappingEngine knows the Key Code too. 
-
-        // Problem: If I press 'Z', I get 'C4'. 
-        // In Piano View, I want C4 to light up.
-        // In Keyboard View, I want 'Z' to light up.
-
-        // We need the mapping info here.
-        // Let's rely on the fact that we might receive both or we lookup.
-
-        // Current implementation in App.js:
-        // ui.setNoteState(processedEvent.fullName, isActive);
-
-        if (this.currentLayoutName === 'piano') {
-            const key = this.keys.get(noteOrCode);
-            if (key) {
-                if (isActive) key.classList.add('active');
-                else key.classList.remove('active');
-            }
-        } else {
-            // Reverse lookup needed? Or pass KeyCode from App?
-            // App.js should pass the original event code too if possible.
-            // Let's modify App.js to pass the whole event object.
-        }
-    }
-
-    // Updated method signature to accept event
     handleNoteEvent(event) {
         const isActive = event.type === 'noteOn';
 
         if (this.currentLayoutName === 'piano') {
-            const key = this.keys.get(event.fullName); // e.g. C4
+            const key = this.keys.get(event.fullName);
             if (key) {
                 if (isActive) key.classList.add('active');
                 else key.classList.remove('active');
             }
         } else {
-            // Keyboard View: Use originalKey code
+            // Keyboard View
             if (event.originalKey) {
                 const key = this.keys.get(event.originalKey);
                 if (key) {
@@ -556,8 +650,7 @@ export class UI {
                 }
             }
         }
-
-        // Always check piano keys too in case they are mapped but not in focus
+        // Always check piano keys too
         const pianoKey = this.keys.get(event.fullName);
         if (pianoKey && isActive) {
             pianoKey.classList.remove('target-note');
@@ -575,6 +668,39 @@ export class UI {
         if (processed) {
             window.app.audio.handleNote(processed);
             this.handleNoteEvent(processed);
+        }
+    }
+
+    // DEBUG: Test function - call window.app.ui.testGuidedModeAdvance() from console
+    testGuidedModeAdvance() {
+        console.log('[DEBUG] Testing GuidedMode advance...');
+        const mode = window.app.mode;
+        console.log('[DEBUG] Current mode:', mode.currentMode?.name);
+
+        if (mode.currentMode?.name === 'guided') {
+            console.log('[DEBUG] Manually calling sequencer.advance()...');
+            window.app.sequencer.advance('C4');
+        } else {
+            console.log('[DEBUG] Not in guided mode, skipping advance test');
+        }
+    }
+
+    // DEBUG: Test function - call window.app.ui.testGuidedModeHandleNote() from console
+    testGuidedModeHandleNote(noteName = 'C4') {
+        console.log('[DEBUG] Testing GuidedMode.handleNote with:', noteName);
+        const mode = window.app.mode;
+        console.log('[DEBUG] Current mode:', mode.currentMode?.name);
+
+        if (mode.currentMode?.name === 'guided') {
+            const noteEvent = {
+                type: 'noteOn',
+                fullName: noteName,
+                inputTime: performance.now()
+            };
+            const result = mode.currentMode.handleNote(noteEvent);
+            console.log('[DEBUG] handleNote result:', result);
+        } else {
+            console.log('[DEBUG] Not in guided mode, cannot test');
         }
     }
 }

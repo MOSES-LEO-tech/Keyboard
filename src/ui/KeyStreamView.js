@@ -1,22 +1,21 @@
 export class KeyStreamView {
-    constructor(container, mappingEngine, hand = 'right') {
+    constructor(container, mappingEngine) {
         this.container = container;
         this.mappingEngine = mappingEngine;
-        this.hand = hand; // 'left' or 'right'
         this.element = null;
         this.strip = null;
         this.notes = [];
         this.currentTime = 0;
-        this.pixelsPerSecond = 150;
+        this.pixelsPerSecond = 150; // Slowed down from 300 for better visibility
+        this.laneHeight = 55; // Increased for better separation
 
         this.init();
     }
 
     init() {
         this.element = document.createElement('div');
-        this.element.className = `key-stream-container ${this.hand}-stream`;
+        this.element.className = `key-stream-container main-stream`;
         this.element.innerHTML = `
-            <div class="stream-label">${this.hand === 'left' ? 'LH' : 'RH'}</div>
             <div class="hit-marker"></div>
             <div class="stream-strip" id="stream-strip"></div>
         `;
@@ -28,27 +27,39 @@ export class KeyStreamView {
     setSong(song) {
         this.notes = [];
         this.strip.innerHTML = '';
+        this.pixelsPerSecond = 300; // Restore zoom level for clarity
         const secondsPerBeat = 60 / song.bpm;
 
-        const lanes = [];
-
-        const filteredNotes = [];
+        // Collect all notes from all tracks
+        const allNotes = [];
         song.tracks.forEach(track => {
-            if (track.hand && track.hand !== this.hand) return;
             track.notes.forEach(note => {
-                filteredNotes.push({
+                allNotes.push({
                     ...note,
+                    trackHand: track.hand || 'right', // Default to right if unknown
                     startTime: note.start * secondsPerBeat,
                     endTime: (note.start + note.duration) * secondsPerBeat
                 });
             });
         });
 
-        filteredNotes.sort((a, b) => a.startTime - b.startTime);
+        allNotes.sort((a, b) => a.startTime - b.startTime);
 
-        filteredNotes.forEach(note => {
+        // Smart Spacing Logic (Lanes)
+        // Hand Zones:
+        // Left Hand: Lanes 0, 1, 2
+        // Right Hand: Lanes 3, 4, 5
+        const lhLanes = [-1, -1, -1];
+        const rhLanes = [-1, -1, -1];
+
+        allNotes.forEach(note => {
             const block = document.createElement('div');
-            block.className = 'stream-block';
+            const isLeft = note.trackHand === 'left';
+
+            block.className = `stream-block ${isLeft ? 'left-hand-block' : 'right-hand-block'}`;
+            if (isLeft) block.classList.add('glow-lh');
+            else block.classList.add('glow-rh');
+
             block.dataset.note = note.note;
 
             const keyLabel = this.getKeyLabel(note.note);
@@ -57,18 +68,42 @@ export class KeyStreamView {
                 <div class="block-note">${note.note}</div>
             `;
 
+            // Find a free lane in appropriate zone
             let laneIndex = 0;
-            // Robust stacking: find first lane where previous note doesn't overlap this one's start
-            while (lanes[laneIndex] > (note.startTime + 0.05)) {
-                laneIndex++;
-            }
-            lanes[laneIndex] = note.endTime;
+            const targetLanes = isLeft ? lhLanes : rhLanes;
 
-            const laneHeight = 35;
-            const topOffset = 5 + (laneIndex * laneHeight);
+            // Try to find a lane that fits
+            // If all full, just use last one (overlap) or mod?
+            // Simple approach: Iterate 0-2
+            let chosenLane = 0;
+            for (let i = 0; i < targetLanes.length; i++) {
+                if (targetLanes[i] <= note.startTime + 0.05) {
+                    chosenLane = i;
+                    break;
+                }
+                // If we get here, all checked lanes are busy.
+                // Default to 0 or cycle? Let's cycle based on note index as fallback
+                chosenLane = i; // Will end up being last lane if all full
+            }
+
+            targetLanes[chosenLane] = note.endTime;
+
+            // Calculate Visual Top Offset
+            // Lane Height = 55
+            // LH Zone (Top): 0-2 -> Offset 15 + (0..2 * 55)
+            // RH Zone (Bottom): 3-5 -> Offset 15 + (3..5 * 55) (Visually separated)
+
+            const zoneOffset = isLeft ? 0 : 3;
+            const finalLaneForRender = chosenLane + zoneOffset;
+
+            // Add a small gap between zones?
+            const zoneGap = isLeft ? 0 : 20; // Extra gap for RH
+
+            const topOffset = 15 + (finalLaneForRender * this.laneHeight) + zoneGap;
 
             block.style.left = `${note.startTime * this.pixelsPerSecond}px`;
-            block.style.width = `${Math.max(45, (note.endTime - note.startTime) * this.pixelsPerSecond)}px`;
+            const width = Math.max(40, (note.endTime - note.startTime) * this.pixelsPerSecond);
+            block.style.width = `${width}px`;
             block.style.top = `${topOffset}px`;
 
             if (note.note.includes('#')) block.classList.add('black-note');
@@ -76,8 +111,6 @@ export class KeyStreamView {
             this.strip.appendChild(block);
             this.notes.push({ time: note.startTime, el: block, note: note.note });
         });
-
-        this.notes.sort((a, b) => a.time - b.time);
     }
 
     getKeyLabel(noteName) {
@@ -92,7 +125,7 @@ export class KeyStreamView {
             if ((m && m.fullName === noteName) || (mShift && mShift.fullName === noteName)) {
                 let label = code.replace('Key', '').replace('Digit', '');
 
-                // Human-friendly symbols
+                // Centralized Symbol Map
                 const symbolMap = {
                     'Equal': '=',
                     'Minus': '-',
@@ -103,19 +136,24 @@ export class KeyStreamView {
                     'Quote': "'",
                     'Comma': ',',
                     'Period': '.',
-                    'Slash': '/'
+                    'Slash': '/',
+                    'Backquote': '`'
                 };
 
                 return symbolMap[label] || label;
             }
         }
-        return '?';
+        // Fallback: If not found (maybe octave difference?), return note name simply
+        return noteName;
     }
 
     update(time) {
         this.currentTime = time;
-        const offset = 100 - (time * this.pixelsPerSecond);
-        this.strip.style.transform = `translateX(${offset}px)`;
+        // Transform: Move left
+        // offset = (ScreenCenter - Time * PxPerSec)
+        const centerOffset = 200; // Hit line position
+        const translate = centerOffset - (time * this.pixelsPerSecond);
+        this.strip.style.transform = `translateX(${translate}px)`;
     }
 
     clearHighlights() {
@@ -123,7 +161,13 @@ export class KeyStreamView {
     }
 
     highlight(noteName) {
-        const active = this.notes.find(n => n.note === noteName && Math.abs(n.time - this.currentTime) < 0.5);
+        // Find blocks near current time matching this note
+        const tolerance = 0.2; // s
+        const active = this.notes.find(n =>
+            n.note === noteName &&
+            Math.abs(n.time - this.currentTime) < tolerance
+        );
+
         if (active) active.el.classList.add('active');
     }
 }

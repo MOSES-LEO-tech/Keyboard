@@ -5,56 +5,6 @@ export class PianoInstrument extends BaseInstrument {
         super();
         const profile = options.profile || 'normal';
 
-        this.sampler = new Tone.Sampler({
-            urls: {
-                "A0": "A0.mp3",
-                "C1": "C1.mp3",
-                "D#1": "Ds1.mp3",
-                "F#1": "Fs1.mp3",
-                "A1": "A1.mp3",
-                "C2": "C2.mp3",
-                "D#2": "Ds2.mp3",
-                "F#2": "Fs2.mp3",
-                "A2": "A2.mp3",
-                "C3": "C3.mp3",
-                "D#3": "Ds3.mp3",
-                "F#3": "Fs3.mp3",
-                "A3": "A3.mp3",
-                "C4": "C4.mp3",
-                "D#4": "Ds4.mp3",
-                "F#4": "Fs4.mp3",
-                "A4": "A4.mp3",
-                "C5": "C5.mp3",
-                "D#5": "Ds5.mp3",
-                "F#5": "Fs5.mp3",
-                "A5": "A5.mp3",
-                "C6": "C6.mp3",
-                "D#6": "Ds6.mp3",
-                "F#6": "Fs6.mp3",
-                "A6": "A6.mp3",
-                "C7": "C7.mp3",
-                "D#7": "Ds7.mp3",
-                "F#7": "Fs7.mp3",
-                "A7": "A7.mp3",
-                "C8": "C8.mp3"
-            },
-            release: 1,
-            baseUrl: "https://tonejs.github.io/audio/salamander/",
-            onload: () => {
-                console.log("Piano Samples Loaded!");
-                window.dispatchEvent(new CustomEvent('samples-loaded', { detail: { instrument: 'piano' } }));
-            },
-            onerror: (err) => {
-                console.warn("Piano samples failed to load, falling back to synth.", err);
-                this.sampler = new Tone.PolySynth(Tone.Synth, {
-                    volume: -8,
-                    oscillator: { type: 'triangle' },
-                    envelope: { attack: 0.05, decay: 0.1, sustain: 0.3, release: 1 }
-                }).toDestination();
-                this.output = this.sampler;
-            }
-        });
-
         const settingsMap = {
             normal: {
                 eq: { low: 0, mid: 0, high: 0 },
@@ -97,19 +47,64 @@ export class PianoInstrument extends BaseInstrument {
             }
         };
         const s = settingsMap[profile] || settingsMap.normal;
+
+        // Create EQ and Reverb first
         this.eq = new Tone.EQ3(s.eq.low, s.eq.mid, s.eq.high);
-        this.reverb = new Tone.Reverb(s.reverb).toDestination();
+        this.reverb = new Tone.Reverb(s.reverb);
         if (s.filter) {
-            this.filter = new Tone.Filter(s.filter.freq, s.filter.type, s.filter.q ?? 0.7);
+            this.filter = new Tone.Filter(s.filter.freq, s.filter.type, -12);
+            this.filter.Q.value = s.filter.q ?? 0.7;
         }
         this._reverbReady = false;
 
-        if (this.filter) {
-            this.sampler.chain(this.eq, this.filter, this.reverb);
-        } else {
-            this.sampler.chain(this.eq, this.reverb);
+        // Try to create Tone.Sampler with online samples
+        let useSampler = true;
+        try {
+            this.sampler = new Tone.Sampler({
+                urls: {
+                    "A0": "A0.mp3", "C1": "C1.mp3", "D#1": "Ds1.mp3", "F#1": "Fs1.mp3",
+                    "A1": "A1.mp3", "C2": "C2.mp3", "D#2": "Ds2.mp3", "F#2": "Fs2.mp3",
+                    "A2": "A2.mp3", "C3": "C3.mp3", "D#3": "Ds3.mp3", "F#3": "Fs3.mp3",
+                    "A3": "A3.mp3", "C4": "C4.mp3", "D#4": "Ds4.mp3", "F#4": "Fs4.mp3",
+                    "A4": "A4.mp3", "C5": "C5.mp3", "D#5": "Ds5.mp3", "F#5": "Fs5.mp3",
+                    "A5": "A5.mp3", "C6": "C6.mp3", "D#6": "Ds6.mp3", "F#6": "Fs6.mp3",
+                    "A6": "A6.mp3", "C7": "C7.mp3", "D#7": "Ds7.mp3", "F#7": "Fs7.mp3",
+                    "A7": "A7.mp3", "C8": "C8.mp3"
+                },
+                release: 1,
+                baseUrl: "https://tonejs.github.io/audio/salamander/",
+                onload: () => {
+                    console.log("Piano Samples Loaded!");
+                    window.dispatchEvent(new CustomEvent('samples-loaded', { detail: { instrument: 'piano' } }));
+                },
+                onerror: (err) => {
+                    console.warn('Piano samples failed to load, falling back to synth');
+                    useSampler = false;
+                }
+            });
+        } catch (error) {
+            useSampler = false;
         }
-        this.output = this.sampler;
+
+        if (useSampler && this.sampler) {
+            // Set up audio chain for Sampler
+            if (this.filter) {
+                this.sampler.chain(this.eq, this.filter, this.reverb);
+            } else {
+                this.sampler.chain(this.eq, this.reverb);
+            }
+            this.output = this.sampler;
+        } else {
+            // Fallback to PolySynth
+            this.sampler = new Tone.PolySynth(Tone.Synth, {
+                volume: -8,
+                oscillator: { type: 'triangle' },
+                envelope: { attack: 0.05, decay: 0.1, sustain: 0.3, release: 1 }
+            });
+            // For PolySynth, we use a simpler chain - just EQ and reverb
+            this.sampler.chain(this.eq, this.reverb);
+            this.output = this.sampler;
+        }
     }
 
     connect(destination) {
