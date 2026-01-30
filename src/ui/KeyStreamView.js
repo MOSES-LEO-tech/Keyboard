@@ -1,3 +1,5 @@
+import { NOTES } from '../utils/noteUtils.js';
+
 export class KeyStreamView {
     constructor(container, mappingEngine) {
         this.container = container;
@@ -6,7 +8,7 @@ export class KeyStreamView {
         this.strip = null;
         this.notes = [];
         this.currentTime = 0;
-        this.pixelsPerSecond = 150; // Slowed down from 300 for better visibility
+        this.pixelsPerSecond = 300; // Restore zoom level for clarity
         this.laneHeight = 55; // Increased for better separation
 
         this.init();
@@ -27,7 +29,7 @@ export class KeyStreamView {
     setSong(song) {
         this.notes = [];
         this.strip.innerHTML = '';
-        this.pixelsPerSecond = 300; // Restore zoom level for clarity
+        this.pixelsPerSecond = 300;
         const secondsPerBeat = 60 / song.bpm;
 
         // Collect all notes from all tracks
@@ -81,9 +83,7 @@ export class KeyStreamView {
                     chosenLane = i;
                     break;
                 }
-                // If we get here, all checked lanes are busy.
-                // Default to 0 or cycle? Let's cycle based on note index as fallback
-                chosenLane = i; // Will end up being last lane if all full
+                chosenLane = i;
             }
 
             targetLanes[chosenLane] = note.endTime;
@@ -96,7 +96,6 @@ export class KeyStreamView {
             const zoneOffset = isLeft ? 0 : 3;
             const finalLaneForRender = chosenLane + zoneOffset;
 
-            // Add a small gap between zones?
             const zoneGap = isLeft ? 0 : 20; // Extra gap for RH
 
             const topOffset = 15 + (finalLaneForRender * this.laneHeight) + zoneGap;
@@ -125,7 +124,6 @@ export class KeyStreamView {
             if ((m && m.fullName === noteName) || (mShift && mShift.fullName === noteName)) {
                 let label = code.replace('Key', '').replace('Digit', '');
 
-                // Centralized Symbol Map
                 const symbolMap = {
                     'Equal': '=',
                     'Minus': '-',
@@ -143,14 +141,11 @@ export class KeyStreamView {
                 return symbolMap[label] || label;
             }
         }
-        // Fallback: If not found (maybe octave difference?), return note name simply
         return noteName;
     }
 
     update(time) {
         this.currentTime = time;
-        // Transform: Move left
-        // offset = (ScreenCenter - Time * PxPerSec)
         const centerOffset = 200; // Hit line position
         const translate = centerOffset - (time * this.pixelsPerSecond);
         this.strip.style.transform = `translateX(${translate}px)`;
@@ -161,7 +156,6 @@ export class KeyStreamView {
     }
 
     highlight(noteName) {
-        // Find blocks near current time matching this note
         const tolerance = 0.2; // s
         const active = this.notes.find(n =>
             n.note === noteName &&

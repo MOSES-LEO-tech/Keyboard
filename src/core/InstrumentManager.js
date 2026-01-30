@@ -1,4 +1,5 @@
 import { PianoInstrument } from '../instruments/PianoInstrument.js';
+import { GrandPianoInstrument } from '../instruments/GrandPianoInstrument.js';
 import { ElectricPianoInstrument } from '../instruments/ElectricPianoInstrument.js';
 import { OrganInstrument } from '../instruments/OrganInstrument.js';
 import { StringsInstrument } from '../instruments/StringsInstrument.js';
@@ -23,6 +24,10 @@ export class InstrumentManager {
         this.registerInstrument('piano-cinematic', new PianoInstrument({ profile: 'cinematic' }));
         this.registerInstrument('upright-piano', new PianoInstrument({ profile: 'upright' }));
         this.registerInstrument('piano-honkytonk', new PianoInstrument({ profile: 'honkytonk' }));
+
+        // Grand Piano (enhanced samples with concert hall reverb)
+        this.registerInstrument('grand-piano', new GrandPianoInstrument());
+
         this.registerInstrument('electric-piano', new ElectricPianoInstrument());
         this.registerInstrument('organ', new OrganInstrument());
         this.registerInstrument('strings', new StringsInstrument());

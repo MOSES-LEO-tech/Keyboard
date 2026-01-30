@@ -208,9 +208,10 @@ export class UI {
                  <div class="control-group">
                     <label>Inst:</label>
                     <select id="instrument-select">
-                         <option value="piano">Piano</option>
+                        <option value="piano">Piano</option>
                         <option value="piano-bright">Piano (Bright)</option>
                         <option value="piano-soft">Piano (Soft)</option>
+                        <option value="grand-piano">Grand Piano</option>
                         <option value="electric-piano">E. Piano</option>
                         <option value="organ">Organ</option>
                         <option value="strings">Strings</option>

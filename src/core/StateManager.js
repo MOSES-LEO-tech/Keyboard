@@ -10,7 +10,7 @@ export class StateManager {
             labelMode: 'both', // 'none', 'note', 'pc', 'both'
             waitMode: true,
             autoPlay: false,
-            
+
             // New Features
             speed: 1.0,
             difficulty: 'hard', // 'easy', 'medium', 'hard'
