@@ -66,7 +66,8 @@ export class UI {
             waitMode: document.getElementById('wait-mode-toggle'),
             speed: document.getElementById('speed-slider'),
             speedVal: document.getElementById('speed-value'),
-            difficulty: document.getElementById('difficulty-select')
+            difficulty: document.getElementById('difficulty-select'),
+            handAssist: document.getElementById('hand-assist-select')
         };
 
         if (els.waitMode) els.waitMode.checked = state.waitMode;
@@ -82,6 +83,7 @@ export class UI {
             els.speedVal.innerText = `${Math.round(state.speed * 100)}%`;
         }
         if (els.difficulty) els.difficulty.value = state.difficulty;
+        if (els.handAssist && state.handAssist) els.handAssist.value = state.handAssist;
 
         this.updateLabels();
     }
@@ -200,6 +202,15 @@ export class UI {
                 <!-- REMOVED OLD WAIT TOGGLE -->
                 
                 <div class="control-group">
+                    <label>Assist:</label>
+                    <select id="hand-assist-select">
+                        <option value="none">Both Hands</option>
+                        <option value="left">Assist Left &#9995;</option>
+                        <option value="right">Assist Right &#x1F91A;</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
                     <button id="btn-play-pause" style="width: 40px; font-size: 1.2em;">▶</button>
                 </div>
                 <div class="control-group">
@@ -262,6 +273,18 @@ export class UI {
             e.target.blur();
         });
 
+        // Hand Assist
+        const assistSelect = document.getElementById("hand-assist-select");
+        if (assistSelect) {
+            assistSelect.value = this.stateManager.getState().handAssist || "none";
+            assistSelect.addEventListener("change", (e) => {
+                const val = e.target.value;
+                this.stateManager.setState({ handAssist: val });
+                if (window.app && window.app.sequencer) window.app.sequencer.setHandAssist(val);
+                e.target.blur();
+            });
+        }
+
         // Play Pause
         const btnPlay = document.getElementById('btn-play-pause');
         if (btnPlay) {
@@ -318,6 +341,7 @@ export class UI {
                     document.body,
                     this.songService,
                     this.libraryService,
+                    this.midiService,
                     (song) => {
                         console.log('Selected song:', song);
                         this.clearTargetHighlights();

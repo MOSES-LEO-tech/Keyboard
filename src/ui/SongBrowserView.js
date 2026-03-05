@@ -1,8 +1,9 @@
 export class SongBrowserView {
-    constructor(container, songService, libraryService, onSelect) {
+    constructor(container, songService, libraryService, midiService, onSelect) {
         this.container = container;
         this.songService = songService;
         this.libraryService = libraryService;
+        this.midiService = midiService;
         this.onSelect = onSelect;
         this.currentTab = 'library';
         this.currentFilter = { difficulty: null, category: null };
@@ -179,70 +180,36 @@ export class SongBrowserView {
     }
 
     async handleMidiFile(file) {
-        console.log('[SongBrowser] 🎵 Processing MIDI file:', file.name);
+        console.log('[SongBrowser] 🎵 Processing MIDI file:', file.name, 'type:', file.type, 'size:', file.size);
 
-        if (!file.name.endsWith('.mid') && !file.name.endsWith('.midi')) {
+        if (!file.name.match(/\.midi?$/i)) {
             alert('Please select a valid MIDI file (.mid or .midi)');
             return;
         }
 
-        // Check if MIDI library is loaded
-        if (!window.Midi) {
-            console.error('[SongBrowser] ❌ MIDI library not loaded');
-            alert('MIDI library not loaded. Please refresh the page and try again.');
-            return;
-        }
+        const dropZone = this.element.querySelector('#midi-drop-zone');
+        const originalHTML = dropZone.innerHTML;
+        dropZone.innerHTML = `
+            <div class="drop-icon">⏳</div>
+            <div class="drop-text">Parsing MIDI file…</div>
+        `;
 
         try {
-            // Parse MIDI file
-            console.log('[SongBrowser] 📖 Parsing MIDI file...');
-            const arrayBuffer = await file.arrayBuffer();
-            const Midi = window.Midi;
-            const midi = new Midi(arrayBuffer);
+            console.log('[SongBrowser] Calling midiService.parseMidiFile...');
+            const song = await this.midiService.parseMidiFile(file);
+            console.log('[SongBrowser] ✅ Parsed song:', song.title,
+                '| tracks:', song.tracks.length,
+                '| hands:', song.hands);
 
-            const title = midi.name || file.name.replace('.mid', '').replace('.midi', '');
-            const bpm = midi.header.tempos[0]?.bpm || 120;
-
-            console.log('[SongBrowser] 📋 Song info:', { title, bpm, tracks: midi.tracks.length });
-
-            // Convert first track to notes
-            const leadTrack = midi.tracks[0];
-            if (!leadTrack || leadTrack.notes.length === 0) {
-                alert('This MIDI file has no notes in the first track.');
-                return;
-            }
-
-            const notes = leadTrack.notes.map(n => ({
-                note: n.name,
-                duration: Math.round(n.duration * 100) / 100,
-                start: Math.round(n.time * 100) / 100
-            }));
-
-            console.log('[SongBrowser] 🎹 Extracted notes:', notes.length);
-
-            const song = {
-                id: `midi_${Date.now()}`,
-                title: title,
-                difficulty: 'medium',
-                category: 'imported',
-                bpm: Math.round(bpm),
-                hands: 'right',
-                description: 'Imported MIDI file',
-                tracks: [{
-                    instrument: 'piano',
-                    notes: notes
-                }]
-            };
-
-            // Save as custom song
+            console.log('[SongBrowser] Saving to library...');
             const savedSong = this.libraryService.addCustomSong(song);
-            console.log('[SongBrowser] ✅ Song saved:', savedSong.id);
+            console.log('[SongBrowser] ✅ Song saved, id:', savedSong.id);
 
-            // Select the song
             this.onSelect(savedSong);
             this.close();
         } catch (err) {
             console.error('[SongBrowser] ❌ Failed to parse MIDI:', err);
+            dropZone.innerHTML = originalHTML;
             alert('Failed to parse MIDI file: ' + err.message);
         }
     }

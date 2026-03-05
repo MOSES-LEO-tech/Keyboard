@@ -117,13 +117,12 @@ label {
 /* --- Unified Key Stream --- */
 #streams-wrapper {
     width: 100%;
-    height: 400px;
-    /* Increased height for better visibility */
-    background: #111;
+    height: 260px;
     position: relative;
     overflow: hidden;
-    margin-bottom: 20px;
-    border-bottom: 2px solid var(--border-color);
+    flex-shrink: 0;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 
 .key-stream-container {
@@ -133,24 +132,12 @@ label {
     overflow: hidden;
 }
 
-.hit-marker {
-    position: absolute;
-    left: 200px;
-    /* Matches centerOffset in JS */
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: rgba(255, 255, 255, 0.5);
-    z-index: 10;
-}
-
+/* Legacy stream-strip kept for backward compat */
 .stream-strip {
     position: absolute;
     top: 0;
     left: 0;
     height: 100%;
-    display: flex;
-    /* Helps debugger, but children are absolute */
     will-change: transform;
 }
 

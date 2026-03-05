@@ -15,6 +15,7 @@ export class StateManager {
             speed: 1.0,
             difficulty: 'hard', // 'easy', 'medium', 'hard'
             hybridMode: false,
+            handAssist: 'none', // 'none' | 'left' | 'right'
         };
         this.listeners = [];
         this.loadPrefs();
