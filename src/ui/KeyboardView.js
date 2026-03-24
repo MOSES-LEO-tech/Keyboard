@@ -42,6 +42,16 @@ export class UI {
             const el = document.getElementById('load-status');
             if (el) el.innerText = 'Ready';
         });
+
+        // Handle window resize with debounce
+        this._resizeTimer = null;
+        this._onWindowResize = () => {
+            if (this._resizeTimer) clearTimeout(this._resizeTimer);
+            this._resizeTimer = setTimeout(() => {
+                this.updateLabels();
+            }, 100);
+        };
+        window.addEventListener('resize', this._onWindowResize);
     }
 
     updateControls(state) {
@@ -642,6 +652,15 @@ export class UI {
     handleNoteEvent(event) {
         const isActive = event.type === 'noteOn';
 
+        // Update waterfall column glow
+        if (this.mainStream) {
+            if (isActive) {
+                this.mainStream.highlightColumn(event.fullName);
+            } else {
+                this.mainStream.clearColumn(event.fullName);
+            }
+        }
+
         if (this.currentLayoutName === 'piano') {
             const key = this.keys.get(event.fullName);
             if (key) {
@@ -714,5 +733,15 @@ export class UI {
         } else {
             console.log('[DEBUG] Not in guided mode, cannot test');
         }
+    }
+
+    destroy() {
+        // Clean up resize timer
+        if (this._resizeTimer) {
+            clearTimeout(this._resizeTimer);
+            this._resizeTimer = null;
+        }
+        // Remove window resize listener
+        window.removeEventListener('resize', this._onWindowResize);
     }
 }

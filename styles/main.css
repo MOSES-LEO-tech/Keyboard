@@ -117,10 +117,11 @@ label {
 /* --- Unified Key Stream --- */
 #streams-wrapper {
     width: 100%;
-    height: 260px;
+    height: 40vh;
+    min-height: 200px;
     position: relative;
     overflow: hidden;
-    flex-shrink: 0;
+    flex: 0 0 40vh;
     border-top: 1px solid rgba(255,255,255,0.06);
     border-bottom: 1px solid rgba(255,255,255,0.06);
 }
@@ -246,6 +247,7 @@ label {
 }
 
 .key.black {
+    position: relative;
     width: 3%;
     height: 18vh;
     background: var(--key-black-bg);
@@ -273,6 +275,12 @@ label {
 
 .key.black .note-label {
     color: #fff;
+    font-size: 8px;
+    opacity: 0.75;
+    position: absolute;
+    bottom: 4px;
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 .pc-key {
