@@ -12,47 +12,55 @@ export class InstrumentManager {
         this.context = audioContext;
         this.destination = destination;
         this.currentInstrument = null;
-        this.instruments = new Map();
+        this.instances = new Map(); // Store instantiated instruments
+        this.registry = new Map();  // Store factory functions
 
-        // Pre-register core instruments
-        this.registerInstrument('piano', new PianoInstrument());
-        this.registerInstrument('piano-bright', new PianoInstrument({ profile: 'bright' }));
-        this.registerInstrument('piano-soft', new PianoInstrument({ profile: 'soft' }));
-        this.registerInstrument('piano-dark', new PianoInstrument({ profile: 'dark' }));
-        this.registerInstrument('piano-warm', new PianoInstrument({ profile: 'warm' }));
-        this.registerInstrument('piano-felt', new PianoInstrument({ profile: 'felt' }));
-        this.registerInstrument('piano-cinematic', new PianoInstrument({ profile: 'cinematic' }));
-        this.registerInstrument('upright-piano', new PianoInstrument({ profile: 'upright' }));
-        this.registerInstrument('piano-honkytonk', new PianoInstrument({ profile: 'honkytonk' }));
+        // Register factory functions for lazy instantiation
+        this.register('piano', () => new PianoInstrument());
+        this.register('piano-bright', () => new PianoInstrument({ profile: 'bright' }));
+        this.register('piano-soft', () => new PianoInstrument({ profile: 'soft' }));
+        this.register('piano-dark', () => new PianoInstrument({ profile: 'dark' }));
+        this.register('piano-warm', () => new PianoInstrument({ profile: 'warm' }));
+        this.register('piano-felt', () => new PianoInstrument({ profile: 'felt' }));
+        this.register('piano-cinematic', () => new PianoInstrument({ profile: 'cinematic' }));
+        this.register('upright-piano', () => new PianoInstrument({ profile: 'upright' }));
+        this.register('piano-honkytonk', () => new PianoInstrument({ profile: 'honkytonk' }));
 
         // Grand Piano (enhanced samples with concert hall reverb)
-        this.registerInstrument('grand-piano', new GrandPianoInstrument());
+        this.register('grand-piano', () => new GrandPianoInstrument());
 
-        this.registerInstrument('electric-piano', new ElectricPianoInstrument());
-        this.registerInstrument('organ', new OrganInstrument());
-        this.registerInstrument('strings', new StringsInstrument());
-        this.registerInstrument('pad', new PadInstrument());
-        this.registerInstrument('bass', new BassInstrument());
-        this.registerInstrument('pluck', new PluckInstrument());
+        this.register('electric-piano', () => new ElectricPianoInstrument());
+        this.register('organ', () => new OrganInstrument());
+        this.register('strings', () => new StringsInstrument());
+        this.register('pad', () => new PadInstrument());
+        this.register('bass', () => new BassInstrument());
+        this.register('pluck', () => new PluckInstrument());
 
         // Default
         this.switchTo('piano');
     }
 
-    registerInstrument(name, instrumentInstance) {
-        this.instruments.set(name, instrumentInstance);
+    register(name, factory) {
+        this.registry.set(name, factory);
     }
 
     switchTo(name) {
-        if (!this.instruments.has(name)) {
-            console.warn(`Instrument ${name} not found.`);
+        if (!this.registry.has(name)) {
+            console.warn(`Instrument ${name} not found in registry.`);
             return;
         }
 
-        const newInstrument = this.instruments.get(name);
+        // Lazy instantiation
+        if (!this.instances.has(name)) {
+            const factory = this.registry.get(name);
+            this.instances.set(name, factory());
+            console.log(`Instantiated instrument: ${name}`);
+        }
+
+        const newInstrument = this.instances.get(name);
 
         // Disconnect old
-        if (this.currentInstrument) {
+        if (this.currentInstrument && this.currentInstrument !== newInstrument) {
             this.currentInstrument.disconnect();
         }
 

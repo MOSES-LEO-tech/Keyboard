@@ -4,12 +4,14 @@ import { SongBrowserView } from './SongBrowserView.js';
 import { KeyStreamView } from './KeyStreamView.js';
 
 export class UI {
-    constructor(stateManager, mappingEngine, songService, midiService, libraryService) {
+    constructor(stateManager, mappingEngine, songService, midiService, libraryService, audioEngine, modeController) {
         this.stateManager = stateManager;
         this.mappingEngine = mappingEngine;
         this.songService = songService;
         this.midiService = midiService;
         this.libraryService = libraryService;
+        this.audioEngine = audioEngine;
+        this.modeController = modeController;
         this.container = document.getElementById('keyboard-container');
         this.statusBar = document.getElementById('status-bar');
         this.keys = new Map();
@@ -40,19 +42,6 @@ export class UI {
             const el = document.getElementById('load-status');
             if (el) el.innerText = 'Ready';
         });
-
-        // Shift Indicator
-        const toggleShift = (isActive) => {
-            const el = document.getElementById('shift-indicator');
-            if (el) {
-                el.innerText = isActive ? 'Shift: ON' : 'Shift: Off';
-                el.style.opacity = isActive ? '1' : '0.3';
-                el.style.fontWeight = isActive ? 'bold' : 'normal';
-                el.style.color = isActive ? '#0ff' : 'inherit';
-            }
-        };
-        window.addEventListener('keydown', e => { if (e.key === 'Shift') toggleShift(true); });
-        window.addEventListener('keyup', e => { if (e.key === 'Shift') toggleShift(false); });
     }
 
     updateControls(state) {
@@ -559,9 +548,7 @@ export class UI {
         key.className = `key ${isBlack ? 'black' : 'white'}`;
         key.dataset.note = `${note}${octave}`;
 
-        if (!isBlack) {
-            key.innerHTML = `<span class="note-label">${note}${octave}</span>`;
-        }
+        key.innerHTML = `<span class="note-label">${note}${octave}</span>`;
 
         const fullName = `${note}${octave}`;
         const down = (e) => {
@@ -689,9 +676,9 @@ export class UI {
             originalKey,
             inputTime: performance.now()
         };
-        const processed = window.app.mode.processNote(noteEvent);
+        const processed = this.modeController.processNote(noteEvent);
         if (processed) {
-            window.app.audio.handleNote(processed);
+            this.audioEngine.handleNote(processed);
             this.handleNoteEvent(processed);
         }
     }

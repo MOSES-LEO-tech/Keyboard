@@ -10,7 +10,7 @@ export class PluckInstrument extends BaseInstrument {
         super();
 
         this.reverb = new Tone.Reverb({ decay: 1.8, preDelay: 0.04, wet: 0.2 });
-        this._reverbReady = false;
+        this.reverb.generate();
 
         this.sampler = new Tone.Sampler({
             urls: {
@@ -49,7 +49,6 @@ export class PluckInstrument extends BaseInstrument {
 
     noteOn(note, velocity = 1, time) {
         const now = time || Tone.now();
-        if (!this._reverbReady) { this.reverb.generate(); this._reverbReady = true; }
         this.sampler.triggerAttack(note, now, velocity);
     }
 

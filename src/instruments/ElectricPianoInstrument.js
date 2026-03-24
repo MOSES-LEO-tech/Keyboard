@@ -15,7 +15,7 @@ export class ElectricPianoInstrument extends BaseInstrument {
         this.tremolo = new Tone.Tremolo(5, 0.25).start();
         this.tremolo.wet.value = 0.3;
         this.reverb  = new Tone.Reverb({ decay: 2.0, preDelay: 0.05, wet: 0.15 });
-        this._reverbReady = false;
+        this.reverb.generate();
 
         // Use Salamander samples pitched down / treated via EQ for e-piano colour
         this.sampler = new Tone.Sampler({
@@ -58,7 +58,6 @@ export class ElectricPianoInstrument extends BaseInstrument {
 
     noteOn(note, velocity = 1, time) {
         const now = time || Tone.now();
-        if (!this._reverbReady) { this.reverb.generate(); this._reverbReady = true; }
         this.sampler.triggerAttack(note, now, velocity);
     }
 

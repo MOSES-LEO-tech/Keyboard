@@ -12,7 +12,7 @@ export class OrganInstrument extends BaseInstrument {
         this.chorus = new Tone.Chorus(1.5, 2.5, 0.3).start();
         this.vibrato = new Tone.Vibrato(5, 0.1);
         this.reverb = new Tone.Reverb({ decay: 2.5, preDelay: 0.05, wet: 0.2 });
-        this._reverbReady = false;
+        this.reverb.generate();
 
         this.sampler = new Tone.Sampler({
             urls: {
@@ -54,7 +54,6 @@ export class OrganInstrument extends BaseInstrument {
 
     noteOn(note, velocity = 1, time) {
         const now = time || Tone.now();
-        if (!this._reverbReady) { this.reverb.generate(); this._reverbReady = true; }
         this.sampler.triggerAttack(note, now, velocity);
     }
 

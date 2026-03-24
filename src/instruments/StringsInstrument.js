@@ -11,7 +11,7 @@ export class StringsInstrument extends BaseInstrument {
 
         this.chorus = new Tone.Chorus(1.8, 2.5, 0.4).start();
         this.reverb = new Tone.Reverb({ decay: 3.5, preDelay: 0.1, wet: 0.35 });
-        this._reverbReady = false;
+        this.reverb.generate();
 
         this.sampler = new Tone.Sampler({
             urls: {
@@ -50,7 +50,6 @@ export class StringsInstrument extends BaseInstrument {
 
     noteOn(note, velocity = 1, time) {
         const now = time || Tone.now();
-        if (!this._reverbReady) { this.reverb.generate(); this._reverbReady = true; }
         this.sampler.triggerAttack(note, now, velocity);
     }
 

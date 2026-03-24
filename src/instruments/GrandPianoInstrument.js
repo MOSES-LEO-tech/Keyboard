@@ -26,8 +26,7 @@ export class GrandPianoInstrument extends BaseInstrument {
             preDelay: 0.08,
             wet: 0.3
         });
-
-        this._reverbReady = false;
+        this.reverb.generate();
 
         this.sampler = new Tone.Sampler({
             urls: {
@@ -61,10 +60,6 @@ export class GrandPianoInstrument extends BaseInstrument {
 
     noteOn(note, velocity = 1, time) {
         const now = time || Tone.now();
-        if (!this._reverbReady) {
-            this.reverb.generate();
-            this._reverbReady = true;
-        }
         // Gentle velocity curve for expressive dynamics
         const vel = Math.pow(velocity, 0.9);
         this.sampler.triggerAttack(note, now, vel);

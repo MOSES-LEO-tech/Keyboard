@@ -51,11 +51,11 @@ export class PianoInstrument extends BaseInstrument {
         // Create EQ and Reverb first
         this.eq = new Tone.EQ3(s.eq.low, s.eq.mid, s.eq.high);
         this.reverb = new Tone.Reverb(s.reverb);
+        this.reverb.generate();
         if (s.filter) {
             this.filter = new Tone.Filter(s.filter.freq, s.filter.type, -12);
             this.filter.Q.value = s.filter.q ?? 0.7;
         }
-        this._reverbReady = false;
 
         // Try to create Tone.Sampler with online samples
         let useSampler = true;
@@ -118,10 +118,6 @@ export class PianoInstrument extends BaseInstrument {
 
     noteOn(note, velocity = 1, time) {
         const now = time || Tone.now();
-        if (!this._reverbReady) {
-            this.reverb.generate();
-            this._reverbReady = true;
-        }
         this.sampler.triggerAttack(note, now, velocity);
     }
 

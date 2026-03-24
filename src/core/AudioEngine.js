@@ -12,6 +12,7 @@ export class AudioEngine {
         this.latencyCount = 0;
         this.sustain = false;
         this.sustainedNotes = new Set();
+        this.contextStarted = false;
 
         this.init();
     }
@@ -73,16 +74,16 @@ export class AudioEngine {
         }
     }
 
-    async handleNote(noteEvent) {
+    handleNote(noteEvent) {
         if (!this.isInitialized) {
             console.warn('AudioEngine not initialized yet');
             return;
         }
-        try {
-            await this.resumeContext();
-        } catch (e) {
-            console.error('Error resuming audio context', e);
-            return;
+
+        if (!this.contextStarted) {
+            Tone.start().catch(e => console.error('Error starting audio context', e));
+            this.contextStarted = true;
+            console.log('Audio Context Started (on-demand)');
         }
 
         const instrument = this.instrumentManager.getCurrent();
