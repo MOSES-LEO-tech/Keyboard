@@ -1,7 +1,8 @@
 export class Sequencer {
-    constructor(audioEngine, stateManager) {
+    constructor(audioEngine, stateManager, ui) {
         this.audioEngine = audioEngine;
         this.stateManager = stateManager;
+        this.ui = ui;
 
         this.isPlaying    = false;
         this.currentSong  = null;
@@ -320,19 +321,28 @@ export class Sequencer {
 
     _scheduleNote(event, currentAudioTime, realDelay) {
         const absoluteTime = currentAudioTime + realDelay;
-        if (event.type === 'noteOn') {
-            this.audioEngine.handleNote({
-                type:     'noteOn',
-                fullName: event.note,
-                velocity: event.velocity ?? 0.8,
-                time:     absoluteTime
-            });
-        } else {
-            this.audioEngine.handleNote({
-                type:     'noteOff',
-                fullName: event.note,
-                time:     absoluteTime
-            });
+        const noteEvent = {
+            type: event.type,
+            fullName: event.note,
+            velocity: event.velocity ?? 0.8,
+            time: absoluteTime
+        };
+
+        this.audioEngine.handleNote(noteEvent);
+
+        // Also send to UI for visual feedback in listen mode
+        if (this.ui && this.autoPlay) {
+            // Schedule the UI update to be as close as possible to the audio event
+            const uiDelay = Math.max(0, realDelay * 1000); // ms
+            setTimeout(() => {
+                this.ui.handleNoteEvent({ type: event.type, fullName: event.note });
+                
+                // In listen mode, also trigger highlight for the current note
+                // This shows the glowing effect on the key being played
+                if (event.type === 'noteOn' && this.ui.highlightNextNote) {
+                    this.ui.highlightNextNote(event.note);
+                }
+            }, uiDelay);
         }
     }
 }

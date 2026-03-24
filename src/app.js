@@ -24,9 +24,8 @@ const inputEngine = new InputEngine(stateManager);
 const songService = new SongService();
 const midiService = new MidiService();
 const libraryService = new SongLibraryService(songService);
-const sequencer = new Sequencer(audioEngine, stateManager);
-
 const ui = new UI(stateManager, mappingEngine, songService, midiService, libraryService, audioEngine, modeController);
+const sequencer = new Sequencer(audioEngine, stateManager, ui);
 
 // Register Modes
 modeController.registerMode('free_play', new FreePlayMode(stateManager));
